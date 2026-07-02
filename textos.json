@@ -1,0 +1,48 @@
+{
+  "titol": "Mapa d'obligatorietats municipals",
+  "subtitol": "Coneix què estableix la llei per cada servei municipal i què n'ha de complir l'ajuntament a la pràctica.",
+
+  "entrada_opcio_municipi_titol": "El teu municipi",
+  "entrada_opcio_municipi_desc": "Veuràs només els serveis rellevants pel teu municipi.",
+  "entrada_opcio_explora_titol": "Explora tots els serveis",
+  "entrada_opcio_explora_desc": "Consulta el mapa complet dels serveis obligatoris i d'interès municipal.",
+
+  "municipi_placeholder": "Cerca el teu municipi...",
+  "municipi_seleccionat_prefix": "Municipi seleccionat:",
+  "municipi_treure_seleccio": "Treu la selecció",
+  "municipi_canviar_des_explora": "Consulta el teu municipi",
+  "torna_inici": "Torna a l'inici",
+
+  "municipi_explicacio": "Es mostren els serveis de prestació obligatòria que apliquen al municipi.",
+  "explora_titol": "Explorant tots els serveis",
+  "explora_explicacio": "Sense filtrar per cap municipi.",
+
+  "filtre_obligatoris_label": "Serveis de prestació obligatòria",
+  "filtre_interes_label": "Serveis d'interès municipal",
+  "distintiu_obligatori": "Obligatori",
+  "distintiu_interes_municipal": "Servei d'interès municipal",
+  "desc_obligatori": "Serveis que la llei exigeix.",
+  "desc_interes_municipal": "Serveis no obligatoris d'impacte directe en la vida quotidiana del municipi.",
+
+  "cerca_filtra_titol": "Cerca i filtra",
+  "cerca_placeholder": "Cerca un servei, una llei, una paraula clau...",
+  "ambit_select_default": "Tots els àmbits",
+  "comptador_resultats": "{n} de {total} serveis",
+
+  "badge_pendent": "En procés d'elaboració",
+  "pendent_nota": "Contingut en procés d'elaboració. Hi inclourà la definició, la normativa sectorial i el que cal verificar a la pràctica.",
+  "checklist_intro": "Preguntes que el municipi ha de poder respondre:",
+  "meta_competencia_label": "Competència:",
+  "meta_actualitzacio_label": "Fitxa actualitzada:",
+  "normativa_mostra": "Mostra la normativa completa",
+  "normativa_amaga": "Amaga la normativa completa",
+
+  "tram_tots": "Tots els municipis",
+  "tram_mes_de": "Més de {n} hab.",
+
+  "cap_resultat": "Cap servei coincideix amb els filtres actuals. Prova d'ampliar la cerca o treure algun filtre.",
+
+  "avis_revisio": "Darrera revisió: 1 de juliol de 2026.",
+  "avis_general": "Aquest mapa té caràcter informatiu i no substitueix la consulta directa de la normativa vigent ni l'assessorament jurídic municipal.",
+  "avis_organitzacio": "Centre d'Anàlisi dels Serveis Municipals (CASM) — Diputació de Barcelona."
+}

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa d'obligatorietats municipals — CASM</title>
+<style>
+  :root {
+    --bg: #FFFFFF;
+    --text: #1A1A1A;
+    --text-body: #333333;
+    --text-meta: #707070;
+    --border: #D7DCE0;
+    --accent: #935580;
+    --accent-soft: #F5EFF2;
+    --bloc-im: #6A8D8E;
+    --bloc-im-soft: #EDF2F2;
+    --pendent: #9D9D9D;
+    --pendent-bg: #F3F3F3;
+    --focus: #935580;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text-body);
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  body { padding-bottom: 4rem; }
+  a { color: var(--accent); }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 1.25rem; }
+  svg.icon { width: 14px; height: 14px; flex-shrink: 0; vertical-align: -2px; }
+
+  header.top { padding: 1.75rem 0 0; }
+  header.top h1 { font-size: 1.5rem; font-weight: 700; margin: 0 0 0.4rem; color: var(--text); letter-spacing: -0.01em; }
+  header.top p.subtitle { margin: 0; color: var(--text-meta); font-size: 0.92rem; line-height: 1.5; width: 100%; }
+
+  .top-links { margin-top: 0.9rem; display: flex; gap: 1rem; flex-wrap: wrap; }
+  .top-links button.link-btn { font-family: inherit; font-size: 0.8rem; color: var(--accent); background: none; border: none; padding: 0; cursor: pointer; text-decoration: underline; }
+
+  .entrada { margin-top: 1.8rem; display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+  .entrada-card { border: 1px solid var(--border); border-radius: 8px; padding: 1.1rem 1.1rem 1.2rem; text-align: left; background: #fff; cursor: pointer; font-family: inherit; }
+  .entrada-card .card-icon { margin-bottom: 0.6rem; }
+  .entrada-card .card-icon svg { width: 26px; height: 26px; }
+  .entrada-card h3 { margin: 0 0 0.35rem; font-size: 1rem; color: var(--text); }
+  .entrada-card p { margin: 0; font-size: 0.82rem; color: var(--text-meta); line-height: 1.5; }
+  @media (max-width: 560px) { .entrada { grid-template-columns: 1fr; } }
+
+  .municipi-search-block { margin-top: 1.2rem; }
+  .field { position: relative; flex: 1 1 220px; }
+  input[type="text"], select {
+    width: 100%; font-family: inherit; font-size: 0.88rem; padding: 0.55rem 0.7rem;
+    border: 1px solid var(--border); border-radius: 4px; background: #fff; color: var(--text);
+  }
+  input[type="text"]:focus, select:focus, button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+  label.field-label { display: block; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-meta); margin-bottom: 0.3rem; }
+  #municipi-suggestions {
+    position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1px solid var(--border);
+    border-top: none; border-radius: 0 0 4px 4px; max-height: 220px; overflow-y: auto; z-index: 30; display: none;
+  }
+  #municipi-suggestions button {
+    display: block; width: 100%; text-align: left; background: none; border: none; padding: 0.5rem 0.7rem;
+    font-size: 0.85rem; cursor: pointer; font-family: inherit; color: var(--text-body);
+  }
+  #municipi-suggestions button:hover, #municipi-suggestions button:focus { background: var(--accent-soft); }
+
+  .controls { position: sticky; top: 0; background: var(--bg); padding: 0.9rem 0; z-index: 20; border-bottom: 1px solid var(--border); }
+
+  .municipi-context { padding: 0.65rem 0.8rem; background: #FAFAFA; border: 1px solid var(--border); border-radius: 6px; }
+  @keyframes flashHighlight { 0% { background-color: var(--accent-soft); } 100% { background-color: #FAFAFA; } }
+  .municipi-context.flash { animation: flashHighlight 1s ease-out; }
+  .municipi-context .top-row { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; flex-wrap: wrap; }
+  .municipi-context .name { font-size: 0.84rem; color: var(--text-body); }
+  .municipi-context .name strong { color: var(--text); }
+  button.clear-btn { display: inline-flex; align-items: center; gap: 0.3rem; border: none; background: none; color: var(--accent); font-family: inherit; font-size: 0.76rem; cursor: pointer; padding: 0; }
+  button.clear-btn .x-icon { display: inline-flex; align-items: center; justify-content: center; width: 14px; height: 14px; border-radius: 50%; border: 1px solid var(--accent); font-size: 0.65rem; line-height: 1; }
+  .municipi-context .explain { font-size: 0.76rem; color: var(--text-meta); margin: 0.5rem 0 0; }
+
+  .type-toggles { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.8rem; }
+  .type-toggle-chip { display: inline-flex; align-items: center; gap: 0.4rem; font-family: inherit; font-size: 0.8rem; padding: 0.4rem 0.7rem; border-radius: 100px; border: 1px solid var(--border); background: #fff; color: var(--text-meta); cursor: pointer; }
+  .type-toggle-chip.on.obligatori { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+  .type-toggle-chip.on.interes { border-color: var(--bloc-im); color: var(--bloc-im); background: var(--bloc-im-soft); }
+  .type-toggle-chip input { display: none; }
+
+  details.filtre-panel { margin-top: 0.85rem; border: 1px solid var(--border); border-radius: 6px; }
+  details.filtre-panel > summary { list-style: none; cursor: pointer; padding: 0.65rem 0.9rem; display: flex; justify-content: space-between; align-items: center; font-size: 0.82rem; color: var(--text-body); }
+  details.filtre-panel > summary::-webkit-details-marker { display: none; }
+  details.filtre-panel > summary .filtre-count { color: var(--text-meta); }
+  details.filtre-panel > summary .chev { color: var(--text-meta); transition: transform .15s ease; }
+  details.filtre-panel[open] > summary .chev { transform: rotate(90deg); }
+  .filtre-panel-body { padding: 0 0.9rem 0.8rem; border-top: 1px solid var(--border); }
+  .search-filter-row { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.7rem; }
+
+  main { padding-top: 1.3rem; }
+
+  details.ambit { border: 1px solid var(--border); border-radius: 6px; margin-bottom: 0.6rem; overflow: hidden; }
+  details.ambit > summary { list-style: none; cursor: pointer; padding: 0.7rem 0.9rem; font-weight: 700; font-size: 0.92rem; color: var(--text); background: #FAFAFA; display: flex; justify-content: space-between; align-items: center; }
+  details.ambit > summary::-webkit-details-marker { display: none; }
+  details.ambit > summary .count { font-weight: 400; color: var(--text-meta); font-size: 0.78rem; }
+  details.ambit > summary .chev { transition: transform 0.15s ease; color: var(--text-meta); margin-left: 0.5rem; }
+  details.ambit[open] > summary .chev { transform: rotate(90deg); }
+
+  .servei-list { border-top: 1px solid var(--border); }
+  details.servei { border-bottom: 1px solid var(--border); }
+  details.servei:last-child { border-bottom: none; }
+  details.servei > summary { list-style: none; cursor: pointer; padding: 0.7rem 0.9rem; display: flex; gap: 0.7rem; align-items: flex-start; justify-content: space-between; }
+  details.servei > summary::-webkit-details-marker { display: none; }
+  details.servei.pendent > summary { background: var(--pendent-bg); }
+  .servei-name-wrap { flex: 1; min-width: 0; }
+  .tipus-tag { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 700; padding: 0.12rem 0.5rem 0.12rem 0.4rem; border-radius: 100px; margin-bottom: 0.3rem; }
+  .tipus-tag.obligatori { background: var(--accent-soft); color: var(--accent); }
+  .tipus-tag.interes { background: var(--bloc-im-soft); color: var(--bloc-im); }
+  .servei-name { display: block; font-size: 0.9rem; font-weight: 600; color: var(--text); }
+  .servei-resum { font-size: 0.82rem; color: var(--text-meta); margin: 0.3rem 0 0; line-height: 1.45; }
+  .badges { display: flex; gap: 0.35rem; flex-wrap: wrap; flex-shrink: 0; align-items: center; }
+  .badge { font-size: 0.7rem; padding: 0.2rem 0.5rem; border-radius: 100px; white-space: nowrap; border: 1px solid var(--border); color: var(--text-meta); background: #fff; }
+  .badge.pendent { background: #EFEFEF; color: var(--pendent); border-color: transparent; }
+  details.servei > summary .chev { color: var(--text-meta); margin-top: 0.15rem; transition: transform 0.15s ease; }
+  details.servei[open] > summary .chev { transform: rotate(90deg); }
+
+  .servei-detail { padding: 0 0.9rem 1rem; }
+  .checklist-intro { font-size: 0.8rem; color: var(--text-meta); margin: 0.3rem 0 0.6rem; }
+  .checklist-group-label { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-meta); font-weight: 700; margin: 0.9rem 0 0.4rem; }
+  .checklist-group-label:first-child { margin-top: 0; }
+
+  details.check-item { border-top: 1px solid var(--border); }
+  .checklist-group-label + details.check-item { border-top: none; }
+  details.check-item > summary { list-style: none; cursor: pointer; display: flex; gap: 0.6rem; padding: 0.55rem 0; align-items: flex-start; }
+  details.check-item > summary::-webkit-details-marker { display: none; }
+  .check-icon { flex-shrink: 0; color: var(--text-meta); padding-top: 0.1rem; }
+  .check-content { flex: 1; }
+  .check-question { font-size: 0.86rem; color: var(--text-body); margin: 0 0 0.2rem; line-height: 1.5; }
+  .check-cita-row { display: flex; align-items: center; gap: 0.3rem; }
+  .check-cita { font-size: 0.74rem; color: var(--accent); }
+  .check-cita-chev { color: var(--accent); font-size: 0.65rem; transition: transform 0.15s ease; }
+  details.check-item[open] .check-cita-chev { transform: rotate(90deg); }
+  .check-item-detail { padding: 0 0 0.7rem 1.9rem; font-size: 0.8rem; line-height: 1.55; color: var(--text-body); }
+
+  .servei-meta-row { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-meta); margin: 0.9rem 0 0.7rem; }
+  .servei-meta-row span strong { color: var(--text-body); font-weight: 600; }
+
+  .legal-toggle { font-family: inherit; font-size: 0.78rem; color: var(--accent); background: none; border: 1px solid var(--border); border-radius: 100px; padding: 0.35rem 0.75rem; cursor: pointer; }
+  .legal-toggle:hover { background: var(--accent-soft); }
+  .legal-box { margin-top: 0.7rem; padding: 0.75rem 0.9rem; background: #FAFAFA; border: 1px solid var(--border); border-radius: 6px; display: none; }
+  .legal-box.open { display: block; }
+  .legal-box ul { margin: 0; padding-left: 1.1rem; font-size: 0.82rem; line-height: 1.7; color: var(--text-body); }
+
+  .pendent-note { font-size: 0.82rem; color: var(--text-meta); font-style: italic; margin: 0.3rem 0 0; }
+  .empty-state { padding: 2rem 0; text-align: center; color: var(--text-meta); font-size: 0.88rem; }
+
+  footer.site { margin-top: 3rem; padding-top: 1.2rem; border-top: 1px solid var(--border); font-size: 0.76rem; color: var(--text-meta); line-height: 1.6; }
+  footer.site p { margin: 0 0 0.4rem; }
+
+  @media (max-width: 560px) {
+    .search-filter-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1 id="app-title"></h1>
+    <p class="subtitle" id="app-subtitle"></p>
+  </header>
+
+  <div id="entrada-screen" class="entrada"></div>
+
+  <div id="municipi-search-block" class="municipi-search-block" style="display:none;">
+    <label class="field-label" for="municipi-input" id="municipi-input-label"></label>
+    <div class="field">
+      <input type="text" id="municipi-input" autocomplete="off">
+      <div id="municipi-suggestions"></div>
+    </div>
+    <div class="top-links"><button type="button" class="link-btn" id="btn-torna-inici-1"></button></div>
+  </div>
+
+  <div id="app-controls" class="controls" style="display:none;">
+    <div id="municipi-context" class="municipi-context" style="display:none;"></div>
+    <div id="explora-header" style="display:none;">
+      <div class="top-links">
+        <button type="button" class="link-btn" id="btn-consulta-municipi"></button>
+        <button type="button" class="link-btn" id="btn-torna-inici-2"></button>
+      </div>
+      <div id="explora-context" class="municipi-context"></div>
+    </div>
+    <details class="filtre-panel" id="filtre-panel">
+      <summary><span id="filtre-panel-title"></span><span class="filtre-count" id="filtre-panel-count"></span><span class="chev">&#9656;</span></summary>
+      <div class="filtre-panel-body">
+        <div class="search-filter-row">
+          <div class="field"><input type="text" id="search-input"></div>
+          <div class="field" style="flex: 0 1 240px;"><select id="ambit-select"></select></div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <main id="app"></main>
+
+  <footer class="site" id="app-footer"></footer>
+</div>
+
+<script>
+const MUNICIPIS = [{"codi_ine": "08001", "poblacio": 13207, "any_poblacio": "2025", "nom": "Abrera", "comarca": "Baix Llobregat"}, {"codi_ine": "08002", "poblacio": 293, "any_poblacio": "2025", "nom": "Aguilar de Segarra", "comarca": "Bages"}, {"codi_ine": "08014", "poblacio": 2569, "any_poblacio": "2025", "nom": "Aiguafreda", "comarca": "Osona"}, {"codi_ine": "08003", "poblacio": 10251, "any_poblacio": "2025", "nom": "Alella", "comarca": "Maresme"}, {"codi_ine": "08004", "poblacio": 267, "any_poblacio": "2025", "nom": "Alpens", "comarca": "Lluçanès"}, {"codi_ine": "08006", "poblacio": 16982, "any_poblacio": "2025", "nom": "Arenys de Mar", "comarca": "Maresme"}, {"codi_ine": "08007", "poblacio": 9527, "any_poblacio": "2025", "nom": "Arenys de Munt", "comarca": "Maresme"}, {"codi_ine": "08009", "poblacio": 12891, "any_poblacio": "2025", "nom": "Argentona", "comarca": "Maresme"}, {"codi_ine": "08008", "poblacio": 245, "any_poblacio": "2025", "nom": "Argençola", "comarca": "Anoia"}, {"codi_ine": "08010", "poblacio": 6211, "any_poblacio": "2025", "nom": "Artés", "comarca": "Bages"}, {"codi_ine": "08013", "poblacio": 1787, "any_poblacio": "2025", "nom": "Avinyonet del Penedès", "comarca": "Alt Penedès"}, {"codi_ine": "08012", "poblacio": 2325, "any_poblacio": "2025", "nom": "Avinyó", "comarca": "Bages"}, {"codi_ine": "08011", "poblacio": 2263, "any_poblacio": "2025", "nom": "Avià", "comarca": "Berguedà"}, {"codi_ine": "08015", "poblacio": 230642, "any_poblacio": "2025", "nom": "Badalona", "comarca": "Barcelonès"}, {"codi_ine": "08904", "poblacio": 13058, "any_poblacio": "2025", "nom": "Badia del Vallès", "comarca": "Vallès Occidental"}, {"codi_ine": "08016", "poblacio": 2167, "any_poblacio": "2025", "nom": "Bagà", "comarca": "Berguedà"}, {"codi_ine": "08017", "poblacio": 4007, "any_poblacio": "2025", "nom": "Balenyà", "comarca": "Osona"}, {"codi_ine": "08018", "poblacio": 3354, "any_poblacio": "2025", "nom": "Balsareny", "comarca": "Bages"}, {"codi_ine": "08252", "poblacio": 34031, "any_poblacio": "2025", "nom": "Barberà del Vallès", "comarca": "Vallès Occidental"}, {"codi_ine": "08019", "poblacio": 1713247, "any_poblacio": "2025", "nom": "Barcelona", "comarca": "Barcelonès"}, {"codi_ine": "08020", "poblacio": 7545, "any_poblacio": "2025", "nom": "Begues", "comarca": "Baix Llobregat"}, {"codi_ine": "08021", "poblacio": 69, "any_poblacio": "2025", "nom": "Bellprat", "comarca": "Anoia"}, {"codi_ine": "08022", "poblacio": 17539, "any_poblacio": "2025", "nom": "Berga", "comarca": "Berguedà"}, {"codi_ine": "08023", "poblacio": 10124, "any_poblacio": "2025", "nom": "Bigues i Riells del Fai", "comarca": "Vallès Oriental"}, {"codi_ine": "08024", "poblacio": 434, "any_poblacio": "2025", "nom": "Borredà", "comarca": "Berguedà"}, {"codi_ine": "08028", "poblacio": 1777, "any_poblacio": "2025", "nom": "Cabrera d'Anoia", "comarca": "Anoia"}, {"codi_ine": "08029", "poblacio": 5053, "any_poblacio": "2025", "nom": "Cabrera de Mar", "comarca": "Maresme"}, {"codi_ine": "08030", "poblacio": 7755, "any_poblacio": "2025", "nom": "Cabrils", "comarca": "Maresme"}, {"codi_ine": "08031", "poblacio": 3627, "any_poblacio": "2025", "nom": "Calaf", "comarca": "Anoia"}, {"codi_ine": "08034", "poblacio": 1121, "any_poblacio": "2025", "nom": "Calders", "comarca": "Moianès"}, {"codi_ine": "08032", "poblacio": 3348, "any_poblacio": "2025", "nom": "Caldes d'Estrac", "comarca": "Maresme"}, {"codi_ine": "08033", "poblacio": 18554, "any_poblacio": "2025", "nom": "Caldes de Montbui", "comarca": "Vallès Oriental"}, {"codi_ine": "08035", "poblacio": 20775, "any_poblacio": "2025", "nom": "Calella", "comarca": "Maresme"}, {"codi_ine": "08037", "poblacio": 2724, "any_poblacio": "2025", "nom": "Calldetenes", "comarca": "Osona"}, {"codi_ine": "08038", "poblacio": 2193, "any_poblacio": "2025", "nom": "Callús", "comarca": "Bages"}, {"codi_ine": "08036", "poblacio": 179, "any_poblacio": "2025", "nom": "Calonge de Segarra", "comarca": "Anoia"}, {"codi_ine": "08039", "poblacio": 588, "any_poblacio": "2025", "nom": "Campins", "comarca": "Vallès Oriental"}, {"codi_ine": "08040", "poblacio": 15191, "any_poblacio": "2025", "nom": "Canet de Mar", "comarca": "Maresme"}, {"codi_ine": "08041", "poblacio": 17445, "any_poblacio": "2025", "nom": "Canovelles", "comarca": "Vallès Oriental"}, {"codi_ine": "08043", "poblacio": 5494, "any_poblacio": "2025", "nom": "Canyelles", "comarca": "Garraf"}, {"codi_ine": "08044", "poblacio": 5598, "any_poblacio": "2025", "nom": "Capellades", "comarca": "Anoia"}, {"codi_ine": "08045", "poblacio": 93, "any_poblacio": "2025", "nom": "Capolat", "comarca": "Berguedà"}, {"codi_ine": "08046", "poblacio": 19050, "any_poblacio": "2025", "nom": "Cardedeu", "comarca": "Vallès Oriental"}, {"codi_ine": "08047", "poblacio": 4540, "any_poblacio": "2025", "nom": "Cardona", "comarca": "Bages"}, {"codi_ine": "08048", "poblacio": 860, "any_poblacio": "2025", "nom": "Carme", "comarca": "Anoia"}, {"codi_ine": "08049", "poblacio": 1665, "any_poblacio": "2025", "nom": "Casserres", "comarca": "Berguedà"}, {"codi_ine": "08057", "poblacio": 68, "any_poblacio": "2025", "nom": "Castell de l'Areny", "comarca": "Berguedà"}, {"codi_ine": "08052", "poblacio": 166, "any_poblacio": "2025", "nom": "Castellar de n'Hug", "comarca": "Berguedà"}, {"codi_ine": "08050", "poblacio": 151, "any_poblacio": "2025", "nom": "Castellar del Riu", "comarca": "Berguedà"}, {"codi_ine": "08051", "poblacio": 25395, "any_poblacio": "2025", "nom": "Castellar del Vallès", "comarca": "Vallès Occidental"}, {"codi_ine": "08053", "poblacio": 4163, "any_poblacio": "2025", "nom": "Castellbell i el Vilar", "comarca": "Bages"}, {"codi_ine": "08054", "poblacio": 13058, "any_poblacio": "2025", "nom": "Castellbisbal", "comarca": "Vallès Occidental"}, {"codi_ine": "08055", "poblacio": 802, "any_poblacio": "2025", "nom": "Castellcir", "comarca": "Moianès"}, {"codi_ine": "08056", "poblacio": 69689, "any_poblacio": "2025", "nom": "Castelldefels", "comarca": "Baix Llobregat"}, {"codi_ine": "08058", "poblacio": 2773, "any_poblacio": "2025", "nom": "Castellet i la Gornal", "comarca": "Alt Penedès"}, {"codi_ine": "08060", "poblacio": 153, "any_poblacio": "2025", "nom": "Castellfollit de Riubregós", "comarca": "Anoia"}, {"codi_ine": "08059", "poblacio": 469, "any_poblacio": "2025", "nom": "Castellfollit del Boix", "comarca": "Bages"}, {"codi_ine": "08061", "poblacio": 2411, "any_poblacio": "2025", "nom": "Castellgalí", "comarca": "Bages"}, {"codi_ine": "08062", "poblacio": 1471, "any_poblacio": "2025", "nom": "Castellnou de Bages", "comarca": "Bages"}, {"codi_ine": "08063", "poblacio": 670, "any_poblacio": "2025", "nom": "Castellolí", "comarca": "Anoia"}, {"codi_ine": "08064", "poblacio": 2742, "any_poblacio": "2025", "nom": "Castellterçol", "comarca": "Moianès"}, {"codi_ine": "08066", "poblacio": 2166, "any_poblacio": "2025", "nom": "Castellví de Rosanes", "comarca": "Baix Llobregat"}, {"codi_ine": "08065", "poblacio": 1718, "any_poblacio": "2025", "nom": "Castellví de la Marca", "comarca": "Alt Penedès"}, {"codi_ine": "08067", "poblacio": 7860, "any_poblacio": "2025", "nom": "Centelles", "comarca": "Osona"}, {"codi_ine": "08268", "poblacio": 1236, "any_poblacio": "2025", "nom": "Cercs", "comarca": "Berguedà"}, {"codi_ine": "08266", "poblacio": 58264, "any_poblacio": "2025", "nom": "Cerdanyola del Vallès", "comarca": "Vallès Occidental"}, {"codi_ine": "08068", "poblacio": 9726, "any_poblacio": "2025", "nom": "Cervelló", "comarca": "Baix Llobregat"}, {"codi_ine": "08069", "poblacio": 4820, "any_poblacio": "2025", "nom": "Collbató", "comarca": "Baix Llobregat"}, {"codi_ine": "08070", "poblacio": 390, "any_poblacio": "2025", "nom": "Collsuspina", "comarca": "Moianès"}, {"codi_ine": "08071", "poblacio": 352, "any_poblacio": "2025", "nom": "Copons", "comarca": "Anoia"}, {"codi_ine": "08072", "poblacio": 16044, "any_poblacio": "2025", "nom": "Corbera de Llobregat", "comarca": "Baix Llobregat"}, {"codi_ine": "08073", "poblacio": 92255, "any_poblacio": "2025", "nom": "Cornellà de Llobregat", "comarca": "Baix Llobregat"}, {"codi_ine": "08074", "poblacio": 17648, "any_poblacio": "2025", "nom": "Cubelles", "comarca": "Garraf"}, {"codi_ine": "08042", "poblacio": 3393, "any_poblacio": "2025", "nom": "Cànoves i Samalús", "comarca": "Vallès Oriental"}, {"codi_ine": "08075", "poblacio": 6307, "any_poblacio": "2025", "nom": "Dosrius", "comarca": "Maresme"}, {"codi_ine": "08025", "poblacio": 2294, "any_poblacio": "2025", "nom": "El Bruc", "comarca": "Anoia"}, {"codi_ine": "08026", "poblacio": 297, "any_poblacio": "2025", "nom": "El Brull", "comarca": "Osona"}, {"codi_ine": "08118", "poblacio": 24727, "any_poblacio": "2025", "nom": "El Masnou", "comarca": "Maresme"}, {"codi_ine": "08158", "poblacio": 4404, "any_poblacio": "2025", "nom": "El Papiol", "comarca": "Baix Llobregat"}, {"codi_ine": "08164", "poblacio": 1392, "any_poblacio": "2025", "nom": "El Pla del Penedès", "comarca": "Alt Penedès"}, {"codi_ine": "08182", "poblacio": 4201, "any_poblacio": "2025", "nom": "El Pont de Vilomara i Rocafort", "comarca": "Bages"}, {"codi_ine": "08169", "poblacio": 66251, "any_poblacio": "2025", "nom": "El Prat de Llobregat", "comarca": "Baix Llobregat"}, {"codi_ine": "08162", "poblacio": 3254, "any_poblacio": "2025", "nom": "Els Hostalets de Pierola", "comarca": "Anoia"}, {"codi_ine": "08170", "poblacio": 553, "any_poblacio": "2025", "nom": "Els Prats de Rei", "comarca": "Anoia"}, {"codi_ine": "08076", "poblacio": 22639, "any_poblacio": "2025", "nom": "Esparreguera", "comarca": "Baix Llobregat"}, {"codi_ine": "08077", "poblacio": 48424, "any_poblacio": "2025", "nom": "Esplugues de Llobregat", "comarca": "Baix Llobregat"}, {"codi_ine": "08134", "poblacio": 1187, "any_poblacio": "2025", "nom": "Figaró-Montmany", "comarca": "Vallès Oriental"}, {"codi_ine": "08081", "poblacio": 493, "any_poblacio": "2025", "nom": "Fogars de Montclús", "comarca": "Vallès Oriental"}, {"codi_ine": "08082", "poblacio": 1705, "any_poblacio": "2025", "nom": "Fogars de la Selva", "comarca": "Selva"}, {"codi_ine": "08083", "poblacio": 2262, "any_poblacio": "2025", "nom": "Folgueroles", "comarca": "Osona"}, {"codi_ine": "08084", "poblacio": 1571, "any_poblacio": "2025", "nom": "Fonollosa", "comarca": "Bages"}, {"codi_ine": "08085", "poblacio": 1436, "any_poblacio": "2025", "nom": "Font-rubí", "comarca": "Alt Penedès"}, {"codi_ine": "08080", "poblacio": 41, "any_poblacio": "2025", "nom": "Fígols", "comarca": "Berguedà"}, {"codi_ine": "08090", "poblacio": 174, "any_poblacio": "2025", "nom": "Gaià", "comarca": "Bages"}, {"codi_ine": "08087", "poblacio": 171, "any_poblacio": "2025", "nom": "Gallifa", "comarca": "Vallès Occidental"}, {"codi_ine": "08089", "poblacio": 48181, "any_poblacio": "2025", "nom": "Gavà", "comarca": "Baix Llobregat"}, {"codi_ine": "08091", "poblacio": 8192, "any_poblacio": "2025", "nom": "Gelida", "comarca": "Alt Penedès"}, {"codi_ine": "08092", "poblacio": 5082, "any_poblacio": "2025", "nom": "Gironella", "comarca": "Berguedà"}, {"codi_ine": "08093", "poblacio": 28, "any_poblacio": "2025", "nom": "Gisclareny", "comarca": "Berguedà"}, {"codi_ine": "08095", "poblacio": 83, "any_poblacio": "2025", "nom": "Granera", "comarca": "Moianès"}, {"codi_ine": "08096", "poblacio": 65123, "any_poblacio": "2025", "nom": "Granollers", "comarca": "Vallès Oriental"}, {"codi_ine": "08097", "poblacio": 1753, "any_poblacio": "2025", "nom": "Gualba", "comarca": "Vallès Oriental"}, {"codi_ine": "08099", "poblacio": 962, "any_poblacio": "2025", "nom": "Guardiola de Berguedà", "comarca": "Berguedà"}, {"codi_ine": "08100", "poblacio": 2738, "any_poblacio": "2025", "nom": "Gurb", "comarca": "Osona"}, {"codi_ine": "08102", "poblacio": 42449, "any_poblacio": "2025", "nom": "Igualada", "comarca": "Anoia"}, {"codi_ine": "08103", "poblacio": 849, "any_poblacio": "2025", "nom": "Jorba", "comarca": "Anoia"}, {"codi_ine": "08005", "poblacio": 9473, "any_poblacio": "2025", "nom": "L'Ametlla del Vallès", "comarca": "Vallès Oriental"}, {"codi_ine": "08078", "poblacio": 260, "any_poblacio": "2025", "nom": "L'Espunyola", "comarca": "Berguedà"}, {"codi_ine": "08254", "poblacio": 2303, "any_poblacio": "2025", "nom": "L'Esquirol", "comarca": "Osona"}, {"codi_ine": "08079", "poblacio": 391, "any_poblacio": "2025", "nom": "L'Estany", "comarca": "Moianès"}, {"codi_ine": "08101", "poblacio": 292161, "any_poblacio": "2025", "nom": "L'Hospitalet de Llobregat", "comarca": "Barcelonès"}, {"codi_ine": "08088", "poblacio": 17386, "any_poblacio": "2025", "nom": "La Garriga", "comarca": "Vallès Oriental"}, {"codi_ine": "08094", "poblacio": 2281, "any_poblacio": "2025", "nom": "La Granada", "comarca": "Alt Penedès"}, {"codi_ine": "08104", "poblacio": 961, "any_poblacio": "2025", "nom": "La Llacuna", "comarca": "Anoia"}, {"codi_ine": "08105", "poblacio": 13254, "any_poblacio": "2025", "nom": "La Llagosta", "comarca": "Vallès Oriental"}, {"codi_ine": "08142", "poblacio": 163, "any_poblacio": "2025", "nom": "La Nou de Berguedà", "comarca": "Berguedà"}, {"codi_ine": "08905", "poblacio": 3059, "any_poblacio": "2025", "nom": "La Palma de Cervelló", "comarca": "Baix Llobregat"}, {"codi_ine": "08165", "poblacio": 2350, "any_poblacio": "2025", "nom": "La Pobla de Claramunt", "comarca": "Anoia"}, {"codi_ine": "08166", "poblacio": 1106, "any_poblacio": "2025", "nom": "La Pobla de Lillet", "comarca": "Berguedà"}, {"codi_ine": "08177", "poblacio": 44, "any_poblacio": "2025", "nom": "La Quar", "comarca": "Berguedà"}, {"codi_ine": "08181", "poblacio": 11021, "any_poblacio": "2025", "nom": "La Roca del Vallès", "comarca": "Vallès Oriental"}, {"codi_ine": "08286", "poblacio": 4154, "any_poblacio": "2025", "nom": "La Torre de Claramunt", "comarca": "Anoia"}, {"codi_ine": "08027", "poblacio": 1064, "any_poblacio": "2025", "nom": "Les Cabanyes", "comarca": "Alt Penedès"}, {"codi_ine": "08086", "poblacio": 20855, "any_poblacio": "2025", "nom": "Les Franqueses del Vallès", "comarca": "Vallès Oriental"}, {"codi_ine": "08116", "poblacio": 758, "any_poblacio": "2025", "nom": "Les Masies de Roda", "comarca": "Osona"}, {"codi_ine": "08117", "poblacio": 3345, "any_poblacio": "2025", "nom": "Les Masies de Voltregà", "comarca": "Osona"}, {"codi_ine": "08106", "poblacio": 10931, "any_poblacio": "2025", "nom": "Llinars del Vallès", "comarca": "Vallès Oriental"}, {"codi_ine": "08107", "poblacio": 16519, "any_poblacio": "2025", "nom": "Lliçà d'Amunt", "comarca": "Vallès Oriental"}, {"codi_ine": "08108", "poblacio": 6891, "any_poblacio": "2025", "nom": "Lliçà de Vall", "comarca": "Vallès Oriental"}, {"codi_ine": "08109", "poblacio": 280, "any_poblacio": "2025", "nom": "Lluçà", "comarca": "Lluçanès"}, {"codi_ine": "08110", "poblacio": 19630, "any_poblacio": "2025", "nom": "Malgrat de Mar", "comarca": "Maresme"}, {"codi_ine": "08111", "poblacio": 286, "any_poblacio": "2025", "nom": "Malla", "comarca": "Osona"}, {"codi_ine": "08112", "poblacio": 21321, "any_poblacio": "2025", "nom": "Manlleu", "comarca": "Osona"}, {"codi_ine": "08113", "poblacio": 80692, "any_poblacio": "2025", "nom": "Manresa", "comarca": "Bages"}, {"codi_ine": "08242", "poblacio": 311, "any_poblacio": "2025", "nom": "Marganell", "comarca": "Bages"}, {"codi_ine": "08114", "poblacio": 28989, "any_poblacio": "2025", "nom": "Martorell", "comarca": "Baix Llobregat"}, {"codi_ine": "08115", "poblacio": 4987, "any_poblacio": "2025", "nom": "Martorelles", "comarca": "Vallès Oriental"}, {"codi_ine": "08119", "poblacio": 10111, "any_poblacio": "2025", "nom": "Masquefa", "comarca": "Anoia"}, {"codi_ine": "08120", "poblacio": 9808, "any_poblacio": "2025", "nom": "Matadepera", "comarca": "Vallès Occidental"}, {"codi_ine": "08121", "poblacio": 131370, "any_poblacio": "2025", "nom": "Mataró", "comarca": "Maresme"}, {"codi_ine": "08122", "poblacio": 2664, "any_poblacio": "2025", "nom": "Mediona", "comarca": "Alt Penedès"}, {"codi_ine": "08138", "poblacio": 6807, "any_poblacio": "2025", "nom": "Moià", "comarca": "Moianès"}, {"codi_ine": "08123", "poblacio": 27291, "any_poblacio": "2025", "nom": "Molins de Rei", "comarca": "Baix Llobregat"}, {"codi_ine": "08124", "poblacio": 52759, "any_poblacio": "2025", "nom": "Mollet del Vallès", "comarca": "Vallès Oriental"}, {"codi_ine": "08128", "poblacio": 764, "any_poblacio": "2025", "nom": "Monistrol de Calders", "comarca": "Moianès"}, {"codi_ine": "08127", "poblacio": 3233, "any_poblacio": "2025", "nom": "Monistrol de Montserrat", "comarca": "Bages"}, {"codi_ine": "08125", "poblacio": 37446, "any_poblacio": "2025", "nom": "Montcada i Reixac", "comarca": "Vallès Occidental"}, {"codi_ine": "08130", "poblacio": 133, "any_poblacio": "2025", "nom": "Montclar", "comarca": "Berguedà"}, {"codi_ine": "08131", "poblacio": 1133, "any_poblacio": "2025", "nom": "Montesquiu", "comarca": "Osona"}, {"codi_ine": "08126", "poblacio": 12835, "any_poblacio": "2025", "nom": "Montgat", "comarca": "Maresme"}, {"codi_ine": "08132", "poblacio": 471, "any_poblacio": "2025", "nom": "Montmajor", "comarca": "Berguedà"}, {"codi_ine": "08133", "poblacio": 182, "any_poblacio": "2025", "nom": "Montmaneu", "comarca": "Anoia"}, {"codi_ine": "08135", "poblacio": 8868, "any_poblacio": "2025", "nom": "Montmeló", "comarca": "Vallès Oriental"}, {"codi_ine": "08136", "poblacio": 17062, "any_poblacio": "2025", "nom": "Montornès del Vallès", "comarca": "Vallès Oriental"}, {"codi_ine": "08137", "poblacio": 387, "any_poblacio": "2025", "nom": "Montseny", "comarca": "Vallès Oriental"}, {"codi_ine": "08129", "poblacio": 700, "any_poblacio": "2025", "nom": "Muntanyola", "comarca": "Osona"}, {"codi_ine": "08139", "poblacio": 234, "any_poblacio": "2025", "nom": "Mura", "comarca": "Bages"}, {"codi_ine": "08140", "poblacio": 6277, "any_poblacio": "2025", "nom": "Navarcles", "comarca": "Bages"}, {"codi_ine": "08141", "poblacio": 6242, "any_poblacio": "2025", "nom": "Navàs", "comarca": "Bages"}, {"codi_ine": "08146", "poblacio": 2134, "any_poblacio": "2025", "nom": "Olesa de Bonesvalls", "comarca": "Alt Penedès"}, {"codi_ine": "08147", "poblacio": 25000, "any_poblacio": "2025", "nom": "Olesa de Montserrat", "comarca": "Baix Llobregat"}, {"codi_ine": "08148", "poblacio": 4473, "any_poblacio": "2025", "nom": "Olivella", "comarca": "Garraf"}, {"codi_ine": "08149", "poblacio": 1204, "any_poblacio": "2025", "nom": "Olost", "comarca": "Lluçanès"}, {"codi_ine": "08144", "poblacio": 926, "any_poblacio": "2025", "nom": "Olvan", "comarca": "Berguedà"}, {"codi_ine": "08145", "poblacio": 3953, "any_poblacio": "2025", "nom": "Olèrdola", "comarca": "Alt Penedès"}, {"codi_ine": "08151", "poblacio": 556, "any_poblacio": "2025", "nom": "Oristà", "comarca": "Lluçanès"}, {"codi_ine": "08152", "poblacio": 176, "any_poblacio": "2025", "nom": "Orpí", "comarca": "Anoia"}, {"codi_ine": "08150", "poblacio": 352, "any_poblacio": "2025", "nom": "Orís", "comarca": "Osona"}, {"codi_ine": "08154", "poblacio": 934, "any_poblacio": "2025", "nom": "Pacs del Penedès", "comarca": "Alt Penedès"}, {"codi_ine": "08155", "poblacio": 10026, "any_poblacio": "2025", "nom": "Palafolls", "comarca": "Maresme"}, {"codi_ine": "08156", "poblacio": 15584, "any_poblacio": "2025", "nom": "Palau-solità i Plegamans", "comarca": "Vallès Occidental"}, {"codi_ine": "08157", "poblacio": 11976, "any_poblacio": "2025", "nom": "Pallejà", "comarca": "Baix Llobregat"}, {"codi_ine": "08159", "poblacio": 18899, "any_poblacio": "2025", "nom": "Parets del Vallès", "comarca": "Vallès Oriental"}, {"codi_ine": "08160", "poblacio": 433, "any_poblacio": "2025", "nom": "Perafita", "comarca": "Lluçanès"}, {"codi_ine": "08161", "poblacio": 17884, "any_poblacio": "2025", "nom": "Piera", "comarca": "Anoia"}, {"codi_ine": "08163", "poblacio": 30071, "any_poblacio": "2025", "nom": "Pineda de Mar", "comarca": "Maresme"}, {"codi_ine": "08167", "poblacio": 8572, "any_poblacio": "2025", "nom": "Polinyà", "comarca": "Vallès Occidental"}, {"codi_ine": "08168", "poblacio": 515, "any_poblacio": "2025", "nom": "Pontons", "comarca": "Alt Penedès"}, {"codi_ine": "08171", "poblacio": 2759, "any_poblacio": "2025", "nom": "Prats de Lluçanès", "comarca": "Lluçanès"}, {"codi_ine": "08230", "poblacio": 10601, "any_poblacio": "2025", "nom": "Premià de Dalt", "comarca": "Maresme"}, {"codi_ine": "08172", "poblacio": 29348, "any_poblacio": "2025", "nom": "Premià de Mar", "comarca": "Maresme"}, {"codi_ine": "08175", "poblacio": 4558, "any_poblacio": "2025", "nom": "Puig-reig", "comarca": "Berguedà"}, {"codi_ine": "08174", "poblacio": 621, "any_poblacio": "2025", "nom": "Puigdàlber", "comarca": "Alt Penedès"}, {"codi_ine": "08176", "poblacio": 205, "any_poblacio": "2025", "nom": "Pujalt", "comarca": "Anoia"}, {"codi_ine": "08178", "poblacio": 598, "any_poblacio": "2025", "nom": "Rajadell", "comarca": "Bages"}, {"codi_ine": "08179", "poblacio": 928, "any_poblacio": "2025", "nom": "Rellinars", "comarca": "Vallès Occidental"}, {"codi_ine": "08180", "poblacio": 39773, "any_poblacio": "2025", "nom": "Ripollet", "comarca": "Vallès Occidental"}, {"codi_ine": "08183", "poblacio": 6948, "any_poblacio": "2025", "nom": "Roda de Ter", "comarca": "Osona"}, {"codi_ine": "08185", "poblacio": 228, "any_poblacio": "2025", "nom": "Rubió", "comarca": "Anoia"}, {"codi_ine": "08184", "poblacio": 82825, "any_poblacio": "2025", "nom": "Rubí", "comarca": "Vallès Occidental"}, {"codi_ine": "08901", "poblacio": 277, "any_poblacio": "2025", "nom": "Rupit i Pruit", "comarca": "Osona"}, {"codi_ine": "08187", "poblacio": 224589, "any_poblacio": "2025", "nom": "Sabadell", "comarca": "Vallès Occidental"}, {"codi_ine": "08188", "poblacio": 153, "any_poblacio": "2025", "nom": "Sagàs", "comarca": "Berguedà"}, {"codi_ine": "08190", "poblacio": 301, "any_poblacio": "2025", "nom": "Saldes", "comarca": "Berguedà"}, {"codi_ine": "08191", "poblacio": 7043, "any_poblacio": "2025", "nom": "Sallent", "comarca": "Bages"}, {"codi_ine": "08194", "poblacio": 38980, "any_poblacio": "2025", "nom": "Sant Adrià de Besòs", "comarca": "Barcelonès"}, {"codi_ine": "08195", "poblacio": 106, "any_poblacio": "2025", "nom": "Sant Agustí de Lluçanès", "comarca": "Osona"}, {"codi_ine": "08197", "poblacio": 11910, "any_poblacio": "2025", "nom": "Sant Andreu de Llavaneres", "comarca": "Maresme"}, {"codi_ine": "08196", "poblacio": 27069, "any_poblacio": "2025", "nom": "Sant Andreu de la Barca", "comarca": "Baix Llobregat"}, {"codi_ine": "08198", "poblacio": 6722, "any_poblacio": "2025", "nom": "Sant Antoni de Vilamajor", "comarca": "Vallès Oriental"}, {"codi_ine": "08199", "poblacio": 931, "any_poblacio": "2025", "nom": "Sant Bartomeu del Grau", "comarca": "Osona"}, {"codi_ine": "08200", "poblacio": 85317, "any_poblacio": "2025", "nom": "Sant Boi de Llobregat", "comarca": "Baix Llobregat"}, {"codi_ine": "08201", "poblacio": 600, "any_poblacio": "2025", "nom": "Sant Boi de Lluçanès", "comarca": "Osona"}, {"codi_ine": "08203", "poblacio": 3855, "any_poblacio": "2025", "nom": "Sant Cebrià de Vallalta", "comarca": "Maresme"}, {"codi_ine": "08202", "poblacio": 18916, "any_poblacio": "2025", "nom": "Sant Celoni", "comarca": "Vallès Oriental"}, {"codi_ine": "08204", "poblacio": 4187, "any_poblacio": "2025", "nom": "Sant Climent de Llobregat", "comarca": "Baix Llobregat"}, {"codi_ine": "08206", "poblacio": 1037, "any_poblacio": "2025", "nom": "Sant Cugat Sesgarrigues", "comarca": "Alt Penedès"}, {"codi_ine": "08205", "poblacio": 97959, "any_poblacio": "2025", "nom": "Sant Cugat del Vallès", "comarca": "Vallès Occidental"}, {"codi_ine": "08208", "poblacio": 8112, "any_poblacio": "2025", "nom": "Sant Esteve Sesrovires", "comarca": "Baix Llobregat"}, {"codi_ine": "08207", "poblacio": 3099, "any_poblacio": "2025", "nom": "Sant Esteve de Palautordera", "comarca": "Vallès Oriental"}, {"codi_ine": "08212", "poblacio": 634, "any_poblacio": "2025", "nom": "Sant Feliu Sasserra", "comarca": "Bages"}, {"codi_ine": "08210", "poblacio": 6821, "any_poblacio": "2025", "nom": "Sant Feliu de Codines", "comarca": "Vallès Oriental"}, {"codi_ine": "08211", "poblacio": 46688, "any_poblacio": "2025", "nom": "Sant Feliu de Llobregat", "comarca": "Baix Llobregat"}, {"codi_ine": "08209", "poblacio": 9400, "any_poblacio": "2025", "nom": "Sant Fost de Campsentelles", "comarca": "Vallès Oriental"}, {"codi_ine": "08213", "poblacio": 9324, "any_poblacio": "2025", "nom": "Sant Fruitós de Bages", "comarca": "Bages"}, {"codi_ine": "08215", "poblacio": 3649, "any_poblacio": "2025", "nom": "Sant Hipòlit de Voltregà", "comarca": "Osona"}, {"codi_ine": "08193", "poblacio": 1482, "any_poblacio": "2025", "nom": "Sant Iscle de Vallalta", "comarca": "Maresme"}, {"codi_ine": "08216", "poblacio": 25, "any_poblacio": "2025", "nom": "Sant Jaume de Frontanyà", "comarca": "Berguedà"}, {"codi_ine": "08217", "poblacio": 35811, "any_poblacio": "2025", "nom": "Sant Joan Despí", "comarca": "Baix Llobregat"}, {"codi_ine": "08218", "poblacio": 11109, "any_poblacio": "2025", "nom": "Sant Joan de Vilatorrada", "comarca": "Bages"}, {"codi_ine": "08903", "poblacio": 234, "any_poblacio": "2025", "nom": "Sant Julià de Cerdanyola", "comarca": "Berguedà"}, {"codi_ine": "08220", "poblacio": 3336, "any_poblacio": "2025", "nom": "Sant Julià de Vilatorta", "comarca": "Osona"}, {"codi_ine": "08221", "poblacio": 21045, "any_poblacio": "2025", "nom": "Sant Just Desvern", "comarca": "Baix Llobregat"}, {"codi_ine": "08223", "poblacio": 2591, "any_poblacio": "2025", "nom": "Sant Llorenç Savall", "comarca": "Vallès Occidental"}, {"codi_ine": "08222", "poblacio": 2621, "any_poblacio": "2025", "nom": "Sant Llorenç d'Hortons", "comarca": "Alt Penedès"}, {"codi_ine": "08227", "poblacio": 3476, "any_poblacio": "2025", "nom": "Sant Martí Sarroca", "comarca": "Alt Penedès"}, {"codi_ine": "08228", "poblacio": 353, "any_poblacio": "2025", "nom": "Sant Martí Sesgueioles", "comarca": "Anoia"}, {"codi_ine": "08225", "poblacio": 135, "any_poblacio": "2025", "nom": "Sant Martí d'Albars", "comarca": "Lluçanès"}, {"codi_ine": "08224", "poblacio": 1261, "any_poblacio": "2025", "nom": "Sant Martí de Centelles", "comarca": "Osona"}, {"codi_ine": "08226", "poblacio": 1269, "any_poblacio": "2025", "nom": "Sant Martí de Tous", "comarca": "Anoia"}, {"codi_ine": "08229", "poblacio": 640, "any_poblacio": "2025", "nom": "Sant Mateu de Bages", "comarca": "Bages"}, {"codi_ine": "08189", "poblacio": 177, "any_poblacio": "2025", "nom": "Sant Pere Sallavinera", "comarca": "Anoia"}, {"codi_ine": "08231", "poblacio": 32613, "any_poblacio": "2025", "nom": "Sant Pere de Ribes", "comarca": "Garraf"}, {"codi_ine": "08232", "poblacio": 2512, "any_poblacio": "2025", "nom": "Sant Pere de Riudebitlles", "comarca": "Alt Penedès"}, {"codi_ine": "08233", "poblacio": 2607, "any_poblacio": "2025", "nom": "Sant Pere de Torelló", "comarca": "Osona"}, {"codi_ine": "08234", "poblacio": 5069, "any_poblacio": "2025", "nom": "Sant Pere de Vilamajor", "comarca": "Vallès Oriental"}, {"codi_ine": "08235", "poblacio": 5778, "any_poblacio": "2025", "nom": "Sant Pol de Mar", "comarca": "Maresme"}, {"codi_ine": "08236", "poblacio": 2585, "any_poblacio": "2025", "nom": "Sant Quintí de Mediona", "comarca": "Alt Penedès"}, {"codi_ine": "08239", "poblacio": 664, "any_poblacio": "2025", "nom": "Sant Quirze Safaja", "comarca": "Moianès"}, {"codi_ine": "08237", "poblacio": 2163, "any_poblacio": "2025", "nom": "Sant Quirze de Besora", "comarca": "Osona"}, {"codi_ine": "08238", "poblacio": 20175, "any_poblacio": "2025", "nom": "Sant Quirze del Vallès", "comarca": "Vallès Occidental"}, {"codi_ine": "08240", "poblacio": 12930, "any_poblacio": "2025", "nom": "Sant Sadurní d'Anoia", "comarca": "Alt Penedès"}, {"codi_ine": "08241", "poblacio": 86, "any_poblacio": "2025", "nom": "Sant Sadurní d'Osormort", "comarca": "Osona"}, {"codi_ine": "08098", "poblacio": 3596, "any_poblacio": "2025", "nom": "Sant Salvador de Guardiola", "comarca": "Bages"}, {"codi_ine": "08262", "poblacio": 10167, "any_poblacio": "2025", "nom": "Sant Vicenç de Castellet", "comarca": "Bages"}, {"codi_ine": "08264", "poblacio": 6829, "any_poblacio": "2025", "nom": "Sant Vicenç de Montalt", "comarca": "Maresme"}, {"codi_ine": "08265", "poblacio": 2118, "any_poblacio": "2025", "nom": "Sant Vicenç de Torelló", "comarca": "Osona"}, {"codi_ine": "08263", "poblacio": 28760, "any_poblacio": "2025", "nom": "Sant Vicenç dels Horts", "comarca": "Baix Llobregat"}, {"codi_ine": "08243", "poblacio": 197, "any_poblacio": "2025", "nom": "Santa Cecília de Voltregà", "comarca": "Osona"}, {"codi_ine": "08244", "poblacio": 8275, "any_poblacio": "2025", "nom": "Santa Coloma de Cervelló", "comarca": "Baix Llobregat"}, {"codi_ine": "08245", "poblacio": 123250, "any_poblacio": "2025", "nom": "Santa Coloma de Gramenet", "comarca": "Barcelonès"}, {"codi_ine": "08246", "poblacio": 2350, "any_poblacio": "2025", "nom": "Santa Eugènia de Berga", "comarca": "Osona"}, {"codi_ine": "08247", "poblacio": 1516, "any_poblacio": "2025", "nom": "Santa Eulàlia de Riuprimer", "comarca": "Osona"}, {"codi_ine": "08248", "poblacio": 7955, "any_poblacio": "2025", "nom": "Santa Eulàlia de Ronçana", "comarca": "Vallès Oriental"}, {"codi_ine": "08249", "poblacio": 367, "any_poblacio": "2025", "nom": "Santa Fe del Penedès", "comarca": "Alt Penedès"}, {"codi_ine": "08250", "poblacio": 10601, "any_poblacio": "2025", "nom": "Santa Margarida de Montbui", "comarca": "Anoia"}, {"codi_ine": "08251", "poblacio": 7775, "any_poblacio": "2025", "nom": "Santa Margarida i els Monjos", "comarca": "Alt Penedès"}, {"codi_ine": "08258", "poblacio": 1100, "any_poblacio": "2025", "nom": "Santa Maria d'Oló", "comarca": "Moianès"}, {"codi_ine": "08253", "poblacio": 164, "any_poblacio": "2025", "nom": "Santa Maria de Besora", "comarca": "Osona"}, {"codi_ine": "08256", "poblacio": 867, "any_poblacio": "2025", "nom": "Santa Maria de Martorelles", "comarca": "Vallès Oriental"}, {"codi_ine": "08255", "poblacio": 179, "any_poblacio": "2025", "nom": "Santa Maria de Merlès", "comarca": "Berguedà"}, {"codi_ine": "08257", "poblacio": 144, "any_poblacio": "2025", "nom": "Santa Maria de Miralles", "comarca": "Anoia"}, {"codi_ine": "08259", "poblacio": 10060, "any_poblacio": "2025", "nom": "Santa Maria de Palautordera", "comarca": "Vallès Oriental"}, {"codi_ine": "08260", "poblacio": 26101, "any_poblacio": "2025", "nom": "Santa Perpètua de Mogoda", "comarca": "Vallès Occidental"}, {"codi_ine": "08261", "poblacio": 4049, "any_poblacio": "2025", "nom": "Santa Susanna", "comarca": "Maresme"}, {"codi_ine": "08192", "poblacio": 7739, "any_poblacio": "2025", "nom": "Santpedor", "comarca": "Bages"}, {"codi_ine": "08267", "poblacio": 9528, "any_poblacio": "2025", "nom": "Sentmenat", "comarca": "Vallès Occidental"}, {"codi_ine": "08269", "poblacio": 3818, "any_poblacio": "2025", "nom": "Seva", "comarca": "Osona"}, {"codi_ine": "08270", "poblacio": 32690, "any_poblacio": "2025", "nom": "Sitges", "comarca": "Garraf"}, {"codi_ine": "08271", "poblacio": 89, "any_poblacio": "2025", "nom": "Sobremunt", "comarca": "Lluçanès"}, {"codi_ine": "08272", "poblacio": 225, "any_poblacio": "2025", "nom": "Sora", "comarca": "Osona"}, {"codi_ine": "08273", "poblacio": 3287, "any_poblacio": "2025", "nom": "Subirats", "comarca": "Alt Penedès"}, {"codi_ine": "08274", "poblacio": 6196, "any_poblacio": "2025", "nom": "Súria", "comarca": "Bages"}, {"codi_ine": "08276", "poblacio": 329, "any_poblacio": "2025", "nom": "Tagamanent", "comarca": "Vallès Oriental"}, {"codi_ine": "08277", "poblacio": 209, "any_poblacio": "2025", "nom": "Talamanca", "comarca": "Bages"}, {"codi_ine": "08278", "poblacio": 6838, "any_poblacio": "2025", "nom": "Taradell", "comarca": "Osona"}, {"codi_ine": "08280", "poblacio": 128, "any_poblacio": "2025", "nom": "Tavertet", "comarca": "Osona"}, {"codi_ine": "08275", "poblacio": 354, "any_poblacio": "2025", "nom": "Tavèrnoles", "comarca": "Osona"}, {"codi_ine": "08281", "poblacio": 6894, "any_poblacio": "2025", "nom": "Teià", "comarca": "Maresme"}, {"codi_ine": "08279", "poblacio": 232676, "any_poblacio": "2025", "nom": "Terrassa", "comarca": "Vallès Occidental"}, {"codi_ine": "08282", "poblacio": 9362, "any_poblacio": "2025", "nom": "Tiana", "comarca": "Maresme"}, {"codi_ine": "08283", "poblacio": 8513, "any_poblacio": "2025", "nom": "Tona", "comarca": "Osona"}, {"codi_ine": "08284", "poblacio": 19047, "any_poblacio": "2025", "nom": "Tordera", "comarca": "Maresme"}, {"codi_ine": "08285", "poblacio": 15334, "any_poblacio": "2025", "nom": "Torelló", "comarca": "Osona"}, {"codi_ine": "08287", "poblacio": 1575, "any_poblacio": "2025", "nom": "Torrelavit", "comarca": "Alt Penedès"}, {"codi_ine": "08288", "poblacio": 2751, "any_poblacio": "2025", "nom": "Torrelles de Foix", "comarca": "Alt Penedès"}, {"codi_ine": "08289", "poblacio": 6162, "any_poblacio": "2025", "nom": "Torrelles de Llobregat", "comarca": "Baix Llobregat"}, {"codi_ine": "08290", "poblacio": 2170, "any_poblacio": "2025", "nom": "Ullastrell", "comarca": "Vallès Occidental"}, {"codi_ine": "08291", "poblacio": 7710, "any_poblacio": "2025", "nom": "Vacarisses", "comarca": "Vallès Occidental"}, {"codi_ine": "08292", "poblacio": 1420, "any_poblacio": "2025", "nom": "Vallbona d'Anoia", "comarca": "Anoia"}, {"codi_ine": "08293", "poblacio": 260, "any_poblacio": "2025", "nom": "Vallcebre", "comarca": "Berguedà"}, {"codi_ine": "08294", "poblacio": 3273, "any_poblacio": "2025", "nom": "Vallgorguina", "comarca": "Vallès Oriental"}, {"codi_ine": "08295", "poblacio": 16239, "any_poblacio": "2025", "nom": "Vallirana", "comarca": "Baix Llobregat"}, {"codi_ine": "08296", "poblacio": 2782, "any_poblacio": "2025", "nom": "Vallromanes", "comarca": "Vallès Oriental"}, {"codi_ine": "08297", "poblacio": 170, "any_poblacio": "2025", "nom": "Veciana", "comarca": "Anoia"}, {"codi_ine": "08298", "poblacio": 50405, "any_poblacio": "2025", "nom": "Vic", "comarca": "Osona"}, {"codi_ine": "08299", "poblacio": 430, "any_poblacio": "2025", "nom": "Vilada", "comarca": "Berguedà"}, {"codi_ine": "08301", "poblacio": 67536, "any_poblacio": "2025", "nom": "Viladecans", "comarca": "Baix Llobregat"}, {"codi_ine": "08300", "poblacio": 7816, "any_poblacio": "2025", "nom": "Viladecavalls", "comarca": "Vallès Occidental"}, {"codi_ine": "08305", "poblacio": 42561, "any_poblacio": "2025", "nom": "Vilafranca del Penedès", "comarca": "Alt Penedès"}, {"codi_ine": "08306", "poblacio": 790, "any_poblacio": "2025", "nom": "Vilalba Sasserra", "comarca": "Vallès Oriental"}, {"codi_ine": "08303", "poblacio": 325, "any_poblacio": "2025", "nom": "Vilanova de Sau", "comarca": "Osona"}, {"codi_ine": "08302", "poblacio": 12886, "any_poblacio": "2025", "nom": "Vilanova del Camí", "comarca": "Anoia"}, {"codi_ine": "08902", "poblacio": 5697, "any_poblacio": "2025", "nom": "Vilanova del Vallès", "comarca": "Vallès Oriental"}, {"codi_ine": "08307", "poblacio": 71305, "any_poblacio": "2025", "nom": "Vilanova i la Geltrú", "comarca": "Garraf"}, {"codi_ine": "08214", "poblacio": 9433, "any_poblacio": "2025", "nom": "Vilassar de Dalt", "comarca": "Maresme"}, {"codi_ine": "08219", "poblacio": 21234, "any_poblacio": "2025", "nom": "Vilassar de Mar", "comarca": "Maresme"}, {"codi_ine": "08304", "poblacio": 1157, "any_poblacio": "2025", "nom": "Vilobí del Penedès", "comarca": "Alt Penedès"}, {"codi_ine": "08308", "poblacio": 178, "any_poblacio": "2025", "nom": "Viver i Serrateix", "comarca": "Berguedà"}, {"codi_ine": "08143", "poblacio": 3756, "any_poblacio": "2025", "nom": "Òdena", "comarca": "Anoia"}, {"codi_ine": "08153", "poblacio": 814, "any_poblacio": "2025", "nom": "Òrrius", "comarca": "Maresme"}];
+const SERVEIS = [{"id": "enllumenat-public", "nom": "Enllumenat públic", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "cementiri", "nom": "Cementiri", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": null, "font_star": false, "estat": "validat", "resum": "Cal garantir un servei de cementiri, propi o compartit amb altres municipis, que compleixi les condicions sanitàries i funcionals mínimes.", "competencia": "propia", "normativa_mare": ["Llei 7/1985, de 2 d'abril, reguladora de les bases del règim local", "Decret legislatiu 2/2003, de 28 d'abril, pel qual s'aprova el Text refós de la Llei municipal i de règim local de Catalunya"], "checklist": [{"pregunta": "El municipi garanteix el servei de cementiri, propi o associat?", "llei_nom": "Llei 7/1985, de 2 d'abril, reguladora de les bases del règim local", "article": "art. 26.1.a", "explicacio": "El cementiri és un servei mínim obligatori que han de prestar tots els municipis, individualment o associats.", "llindar_label": "Tots els municipis", "pob_min": null, "pob_min_strict": true, "pob_max": null, "pob_max_strict": true}, {"pregunta": "El cementiri disposa dels elements mínims exigibles (sepultures suficients, dipòsit de cadàvers, ossera general, instal·lacions d'aigua, serveis higiènics i llibre-registre d'inhumacions i exhumacions)?", "llei_nom": "Decret 297/1997, de 25 de novembre, pel qual s'aprova el Reglament de policia sanitària mortuòria de Catalunya", "article": "art. 46", "explicacio": "El cementiri ha de disposar, com a mínim, de sepultures suficients, dipòsit de cadàvers, ossera general, instal·lacions d'aigua, serveis higiènics i llibre-registre d'inhumacions i exhumacions.", "llindar_label": "Tots els municipis", "pob_min": null, "pob_min_strict": true, "pob_max": null, "pob_max_strict": true}, {"pregunta": "Està garantit l'accés als serveis funeraris al municipi?", "llei_nom": "Llei 2/1997, de 3 d'abril, sobre serveis funeraris", "article": "art. 1", "explicacio": "Els serveis funeraris són un servei essencial d'interès general que l'ajuntament ha de garantir a tota la col·lectivitat local.", "llindar_label": "Tots els municipis", "pob_min": null, "pob_min_strict": true, "pob_max": null, "pob_max_strict": true}, {"pregunta": "Se sap qui presta els serveis funeraris i sota quin règim d'autorització?", "llei_nom": "Llei 2/1997, de 3 d'abril, sobre serveis funeraris", "article": "art. 1", "explicacio": "Els serveis funeraris poden ser prestats per l'Administració, empreses públiques o empreses privades, sempre sotmesos a control, policia i autorització.", "llindar_label": "Tots els municipis", "pob_min": null, "pob_min_strict": true, "pob_max": null, "pob_max_strict": true}], "data_actualitzacio": "2026-07-01"}, {"id": "recollida-residus", "nom": "Recollida de residus", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "neteja-viaria", "nom": "Neteja viària", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "abastament-aigua", "nom": "Abastament domiciliari d'aigua potable", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "clavegueram", "nom": "Clavegueram / evacuació d'aigües residuals", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "acces-nuclis", "nom": "Accés als nuclis de població", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "pavimentacio-vies", "nom": "Pavimentació i conservació de les vies públiques", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "control-aliments", "nom": "Control d'aliments i begudes", "bloc": "obligatori", "ambit": "Salut", "tram_base": null, "font_star": true, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "parc-public", "nom": "Parc públic", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": 5000, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "biblioteca-publica", "nom": "Biblioteca pública", "bloc": "obligatori", "ambit": "Cultura", "tram_base": 5000, "font_star": false, "estat": "validat", "resum": "Cal garantir l'accés de la ciutadania a la lectura pública, amb biblioteca pròpia o amb el suport d'altres administracions.", "competencia": "propia", "normativa_mare": ["Llei 7/1985, de 2 d'abril, reguladora de les bases del règim local", "Decret legislatiu 2/2003, de 28 d'abril, pel qual s'aprova el Text refós de la Llei municipal i de règim local de Catalunya"], "checklist": [{"pregunta": "El municipi coordina i promou la lectura pública al seu terme municipal?", "llei_nom": "Llei 4/1993, de 18 de març, del sistema bibliotecari de Catalunya", "article": "", "explicacio": "La llei atribueix a tots els municipis la funció de coordinar i promoure la lectura pública, més enllà de si disposen o no d'una biblioteca pròpia.", "llindar_label": "Tots els municipis", "pob_min": null, "pob_min_strict": true, "pob_max": null, "pob_max_strict": true}, {"pregunta": "Si disposa d'una biblioteca de titularitat municipal, està creada, regulada, organitzada i gestionada d'acord amb la llei, el reglament i el Mapa de la Lectura Pública?", "llei_nom": "Llei 4/1993, de 18 de març, del sistema bibliotecari de Catalunya", "article": "", "explicacio": "Els municipis han de crear, regular, organitzar i gestionar les biblioteques de titularitat municipal d'acord amb la llei, el reglament i el Mapa de la Lectura Pública.", "llindar_label": "Tots els municipis", "pob_min": null, "pob_min_strict": true, "pob_max": null, "pob_max_strict": true}, {"pregunta": "Quin suport comarcal rep el municipi per a la prestació del servei de lectura pública?", "llei_nom": "Llei 4/1993, de 18 de març, del sistema bibliotecari de Catalunya", "article": "", "explicacio": "Els municipis de menys de 5.000 habitants han de rebre el suport de la comarca respectiva en la prestació del servei de lectura pública.", "llindar_label": "Menys de 5.000 hab.", "pob_min": null, "pob_min_strict": true, "pob_max": 5000, "pob_max_strict": true}, {"pregunta": "El municipi està atès per un servei de biblioteca filial, d'acord amb el Mapa de la Lectura Pública?", "llei_nom": "Mapa de la Lectura Pública de Catalunya", "article": "", "explicacio": "El Mapa de la Lectura Pública preveu que els municipis d'aquesta franja siguin atesos per un servei de biblioteca filial.", "llindar_label": "Entre 3.000 i 5.000 hab.", "pob_min": 3000, "pob_min_strict": false, "pob_max": 5000, "pob_max_strict": true}, {"pregunta": "El servei es presta mitjançant biblioteca municipal pròpia o mitjançant una altra biblioteca del Sistema de Lectura Pública amb conveni?", "llei_nom": "Llei 4/1993, de 18 de març, del sistema bibliotecari de Catalunya", "article": "", "explicacio": "Els municipis de 5.000 habitants o més han de prestar el servei de biblioteca local, amb biblioteca pròpia o mitjançant conveni amb una altra biblioteca del Sistema de Lectura Pública.", "llindar_label": "5.000 hab. o més", "pob_min": 5000, "pob_min_strict": false, "pob_max": null, "pob_max_strict": true}, {"pregunta": "El servei de lectura pública es presta de manera descentralitzada, d'acord amb el Mapa de la Lectura Pública?", "llei_nom": "Decret legislatiu 2/2003, de 28 d'abril, pel qual s'aprova el Text refós de la Llei municipal i de règim local de Catalunya", "article": "art. 66.3", "explicacio": "Els municipis de més de 30.000 habitants han de prestar el servei de lectura pública de manera descentralitzada, d'acord amb el Mapa de la Lectura Pública.", "llindar_label": "Més de 30.000 hab.", "pob_min": 30000, "pob_min_strict": true, "pob_max": null, "pob_max_strict": true}], "data_actualitzacio": "2026-07-01"}, {"id": "tractament-residus", "nom": "Tractament de residus", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": 5000, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "mercat", "nom": "Mercat", "bloc": "obligatori", "ambit": "Comerç, ocupació i promoció econòmica", "tram_base": 5000, "font_star": true, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "proteccio-civil", "nom": "Protecció civil", "bloc": "obligatori", "ambit": "Seguretat i protecció", "tram_base": 20000, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "serveis-socials-avaluacio", "nom": "Serveis socials: avaluació, informació i atenció immediata en situacions de risc d'exclusió", "bloc": "obligatori", "ambit": "Serveis socials", "tram_base": 20000, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "prevencio-incendis", "nom": "Prevenció i extinció d'incendis", "bloc": "obligatori", "ambit": "Seguretat i protecció", "tram_base": 20000, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "installacions-esportives", "nom": "Instal·lacions esportives d'ús públic", "bloc": "obligatori", "ambit": "Esports i lleure", "tram_base": 20000, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "lectura-publica-descentralitzada", "nom": "Servei de lectura pública descentralitzat", "bloc": "obligatori", "ambit": "Cultura", "tram_base": 30000, "font_star": true, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "transport-collectiu-urba", "nom": "Transport col·lectiu urbà de viatgers", "bloc": "obligatori", "ambit": "Mobilitat i transport", "tram_base": 50000, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "medi-ambient-urba", "nom": "Medi ambient urbà / Protecció del medi", "bloc": "obligatori", "ambit": "Urbanisme, via pública i medi ambient", "tram_base": 50000, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "transport-adaptat", "nom": "Transport adaptat", "bloc": "obligatori", "ambit": "Mobilitat i transport", "tram_base": 50000, "font_star": true, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "casal-gent-gran", "nom": "Casal de gent gran", "bloc": "interes_municipal", "ambit": "Serveis socials", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "centres-dia-residencies", "nom": "Centres de dia i residències", "bloc": "interes_municipal", "ambit": "Serveis socials", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "mediacio-ciutadana", "nom": "Mediació ciutadana", "bloc": "interes_municipal", "ambit": "Serveis socials", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "sad", "nom": "Servei d'Ajuda a Domicili", "bloc": "interes_municipal", "ambit": "Serveis socials", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "teleassistencia", "nom": "Teleassistència", "bloc": "interes_municipal", "ambit": "Serveis socials", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "centres-ensenyament", "nom": "Centres d'ensenyaments i formació", "bloc": "interes_municipal", "ambit": "Educació i joventut", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "espai-jove", "nom": "Espai jove", "bloc": "interes_municipal", "ambit": "Educació i joventut", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "punt-informacio-juvenil", "nom": "Punt d'informació juvenil", "bloc": "interes_municipal", "ambit": "Educació i joventut", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "informacio-orientacio-dona", "nom": "Informació i orientació de la dona", "bloc": "interes_municipal", "ambit": "Serveis socials", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "piscina-municipal", "nom": "Piscina municipal", "bloc": "interes_municipal", "ambit": "Esports i lleure", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "museu", "nom": "Museu", "bloc": "interes_municipal", "ambit": "Cultura", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "arts-esceniques", "nom": "Promoció de les arts escèniques", "bloc": "interes_municipal", "ambit": "Cultura", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "mobilitat", "nom": "Mobilitat (sostenible, escolar, col·lectius, interurbà)", "bloc": "interes_municipal", "ambit": "Mobilitat i transport", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "atencio-ciutadana", "nom": "Atenció ciutadana", "bloc": "interes_municipal", "ambit": "Organització interna i transparència", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "omic", "nom": "OMIC", "bloc": "interes_municipal", "ambit": "Comerç, ocupació i promoció econòmica", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "suport-empresa", "nom": "Suport a l'empresa", "bloc": "interes_municipal", "ambit": "Comerç, ocupació i promoció econòmica", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "mercat-treball", "nom": "Mercat de treball (orientació, inserció i formació ocupacional)", "bloc": "interes_municipal", "ambit": "Comerç, ocupació i promoció econòmica", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "fires", "nom": "Fires", "bloc": "interes_municipal", "ambit": "Comerç, ocupació i promoció econòmica", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "comerc", "nom": "Comerç", "bloc": "interes_municipal", "ambit": "Comerç, ocupació i promoció econòmica", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "turisme", "nom": "Turisme", "bloc": "interes_municipal", "ambit": "Comerç, ocupació i promoció econòmica", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "oficina-local-habitatge", "nom": "Oficina local d'habitatge", "bloc": "interes_municipal", "ambit": "Habitatge", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "policia-vigilancia-local", "nom": "Policia / vigilància local", "bloc": "interes_municipal", "ambit": "Seguretat i protecció", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "promocio-salut", "nom": "Promoció de la salut", "bloc": "interes_municipal", "ambit": "Salut", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "proteccio-salut", "nom": "Protecció de la salut", "bloc": "interes_municipal", "ambit": "Salut", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "transparencia", "nom": "Obligacions en matèria de transparència", "bloc": "interes_municipal", "ambit": "Organització interna i transparència", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "fhn", "nom": "Funcionaris d'habilitació nacional", "bloc": "interes_municipal", "ambit": "Organització interna i transparència", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}, {"id": "recursos-humans", "nom": "Recursos humans", "bloc": "interes_municipal", "ambit": "Organització interna i transparència", "tram_base": null, "font_star": false, "estat": "pendent", "resum": null, "competencia": null, "normativa_mare": [], "checklist": [], "data_actualitzacio": null}];
+const AMBIT_ORDER = ["Urbanisme, via pública i medi ambient", "Salut", "Cultura", "Serveis socials", "Seguretat i protecció", "Esports i lleure", "Educació i joventut", "Mobilitat i transport", "Comerç, ocupació i promoció econòmica", "Habitatge", "Organització interna i transparència"];
+const T = {"titol": "Mapa d'obligatorietats municipals", "subtitol": "Coneix què estableix la llei per cada servei municipal i què n'ha de complir l'ajuntament a la pràctica.", "entrada_opcio_municipi_titol": "El teu municipi", "entrada_opcio_municipi_desc": "Veuràs només els serveis rellevants pel teu municipi.", "entrada_opcio_explora_titol": "Explora tots els serveis", "entrada_opcio_explora_desc": "Consulta el mapa complet dels serveis obligatoris i d'interès municipal.", "municipi_placeholder": "Cerca el teu municipi...", "municipi_seleccionat_prefix": "Municipi seleccionat:", "municipi_treure_seleccio": "Treu la selecció", "municipi_canviar_des_explora": "Consulta el teu municipi", "torna_inici": "Torna a l'inici", "municipi_explicacio": "Es mostren els serveis de prestació obligatòria que apliquen al municipi.", "explora_titol": "Explorant tots els serveis", "explora_explicacio": "Sense filtrar per cap municipi.", "filtre_obligatoris_label": "Serveis de prestació obligatòria", "filtre_interes_label": "Serveis d'interès municipal", "distintiu_obligatori": "Obligatori", "distintiu_interes_municipal": "Servei d'interès municipal", "desc_obligatori": "Serveis que la llei exigeix.", "desc_interes_municipal": "Serveis no obligatoris d'impacte directe en la vida quotidiana del municipi.", "cerca_filtra_titol": "Cerca i filtra", "cerca_placeholder": "Cerca un servei, una llei, una paraula clau...", "ambit_select_default": "Tots els àmbits", "comptador_resultats": "{n} de {total} serveis", "badge_pendent": "En procés d'elaboració", "pendent_nota": "Contingut en procés d'elaboració. Hi inclourà la definició, la normativa sectorial i el que cal verificar a la pràctica.", "checklist_intro": "Preguntes que el municipi ha de poder respondre:", "meta_competencia_label": "Competència:", "meta_actualitzacio_label": "Fitxa actualitzada:", "normativa_mostra": "Mostra la normativa completa", "normativa_amaga": "Amaga la normativa completa", "tram_tots": "Tots els municipis", "tram_mes_de": "Més de {n} hab.", "cap_resultat": "Cap servei coincideix amb els filtres actuals. Prova d'ampliar la cerca o treure algun filtre.", "avis_revisio": "Darrera revisió: 1 de juliol de 2026.", "avis_general": "Aquest mapa té caràcter informatiu i no substitueix la consulta directa de la normativa vigent ni l'assessorament jurídic municipal.", "avis_organitzacio": "Centre d'Anàlisi dels Serveis Municipals (CASM) — Diputació de Barcelona."};
+
+function t(key, vars) {
+  let s = T[key] || key;
+  if (vars) Object.keys(vars).forEach(k => { s = s.split("{" + k + "}").join(vars[k]); });
+  return s;
+}
+
+// Escut = obligació legal. Tick = servei d'interès municipal (a valorar).
+const ICON_OBLIGATORI = '<svg class="icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1.3L13.5 3.3V7.3C13.5 10.8 11.2 13.1 8 14.6C4.8 13.1 2.5 10.8 2.5 7.3V3.3L8 1.3Z" fill="currentColor"/></svg>';
+const ICON_INTERES = '<svg class="icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6.8" stroke="currentColor" stroke-width="1.4"/><path d="M5 8.2L7 10.2L11 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const ICON_CHECKBOX = '<svg class="icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.4"/></svg>';
+const ICON_MUNICIPI_LARGE = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color:var(--accent)"><path d="M4 21V9L12 3L20 9V21" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 21V13H15V21" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
+const ICON_EXPLORA_LARGE = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color:var(--text-meta)"><rect x="3.5" y="3.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>';
+
+let state = {
+  view: "entrada",             // entrada | cercaMunicipi | municipi | explora
+  municipi: null,
+  showObligatori: true,
+  showInteres: true,
+  search: "",
+  ambit: "tots",
+  justCleared: false,
+};
+
+function normalize(str) {
+  return (str || "").toString().toLowerCase().normalize("NFD").replace(/[\\u0300-\\u036f]/g, "");
+}
+
+function tramLabel(servei) {
+  if (servei.tram_base == null) return t("tram_tots");
+  return t("tram_mes_de", { n: servei.tram_base.toLocaleString("ca-ES") });
+}
+
+function serveiApplies(servei, poblacio) {
+  if (servei.tram_base == null) return true;
+  return poblacio > servei.tram_base;
+}
+
+function itemApplies(itm, poblacio) {
+  if (itm.pob_min != null) {
+    if (itm.pob_min_strict ? !(poblacio > itm.pob_min) : !(poblacio >= itm.pob_min)) return false;
+  }
+  if (itm.pob_max != null) {
+    if (itm.pob_max_strict ? !(poblacio < itm.pob_max) : !(poblacio <= itm.pob_max)) return false;
+  }
+  return true;
+}
+
+// Card-level inclusion in municipi view: if the fitxa has a validated checklist, use its
+// per-item thresholds (more precise, can include obligations below the headline tram_base,
+// e.g. comarcal support for libraries under 5.000 hab.). Fitxes pendents fall back to tram_base.
+function cardAppliesForMunicipi(servei, poblacio) {
+  if (servei.checklist && servei.checklist.length) {
+    return servei.checklist.some(it => itemApplies(it, poblacio));
+  }
+  return serveiApplies(servei, poblacio);
+}
+
+function staticText() {
+  document.getElementById("app-title").textContent = t("titol");
+  document.getElementById("app-subtitle").textContent = t("subtitol");
+  document.getElementById("municipi-input").placeholder = t("municipi_placeholder");
+  document.getElementById("municipi-input-label").textContent = t("municipi_placeholder");
+  document.getElementById("btn-torna-inici-1").textContent = t("torna_inici");
+  document.getElementById("btn-torna-inici-2").textContent = t("torna_inici");
+  document.getElementById("btn-consulta-municipi").textContent = t("municipi_canviar_des_explora");
+  document.getElementById("search-input").placeholder = t("cerca_placeholder");
+  document.getElementById("filtre-panel-title").textContent = t("cerca_filtra_titol");
+  document.getElementById("ambit-select").innerHTML = '<option value="tots">' + t("ambit_select_default") + '</option>' +
+    AMBIT_ORDER.map(a => '<option value="' + a + '">' + a + '</option>').join("");
+  document.getElementById("app-footer").innerHTML =
+    '<p>' + t("avis_revisio") + '</p><p>' + t("avis_general") + '</p><p>' + t("avis_organitzacio") + '</p>';
+}
+
+function renderEntrada() {
+  const el = document.getElementById("entrada-screen");
+  el.innerHTML =
+    '<button type="button" class="entrada-card" id="entrada-municipi">' +
+      '<div class="card-icon">' + ICON_MUNICIPI_LARGE + '</div>' +
+      '<h3>' + t("entrada_opcio_municipi_titol") + '</h3><p>' + t("entrada_opcio_municipi_desc") + '</p>' +
+    '</button>' +
+    '<button type="button" class="entrada-card" id="entrada-explora">' +
+      '<div class="card-icon">' + ICON_EXPLORA_LARGE + '</div>' +
+      '<h3>' + t("entrada_opcio_explora_titol") + '</h3><p>' + t("entrada_opcio_explora_desc") + '</p>' +
+    '</button>';
+  document.getElementById("entrada-municipi").addEventListener("click", () => setView("cercaMunicipi"));
+  document.getElementById("entrada-explora").addEventListener("click", () => setView("explora"));
+}
+
+function setView(view) {
+  state.view = view;
+  if (view === "explora") { state.showObligatori = true; state.showInteres = true; }
+  updateVisibility();
+}
+
+function updateVisibility() {
+  document.getElementById("entrada-screen").style.display = state.view === "entrada" ? "grid" : "none";
+  document.getElementById("municipi-search-block").style.display = (state.view === "cercaMunicipi") ? "block" : "none";
+  document.getElementById("app-controls").style.display = (state.view === "municipi" || state.view === "explora") ? "block" : "none";
+  document.getElementById("app").style.display = (state.view === "municipi" || state.view === "explora") ? "block" : "none";
+
+  document.getElementById("municipi-context").style.display = (state.view === "municipi") ? "block" : "none";
+  document.getElementById("explora-header").style.display = (state.view === "explora") ? "block" : "none";
+
+  if (state.view === "municipi") renderMunicipiContext();
+  if (state.view === "explora") renderExploraContext();
+  if (state.view === "municipi" || state.view === "explora") render();
+}
+
+function renderExploraContext() {
+  const ctx = document.getElementById("explora-context");
+  ctx.innerHTML =
+    '<div class="top-row"><span class="name"><strong>' + t("explora_titol") + '</strong></span></div>' +
+    '<p class="explain">' + t("explora_explicacio") + '</p>' +
+    '<div class="type-toggles" id="type-toggles"></div>';
+  renderTypeToggles();
+  if (state.justCleared) {
+    ctx.classList.add("flash");
+    state.justCleared = false;
+  } else {
+    ctx.classList.remove("flash");
+  }
+}
+
+function renderTypeToggles() {
+  const wrap = document.getElementById("type-toggles");
+  wrap.innerHTML =
+    '<label class="type-toggle-chip obligatori ' + (state.showObligatori ? "on" : "") + '">' +
+      '<input type="checkbox" id="chk-obligatori" ' + (state.showObligatori ? "checked" : "") + '>' +
+      ICON_OBLIGATORI + '<span>' + t("filtre_obligatoris_label") + '</span></label>' +
+    '<label class="type-toggle-chip interes ' + (state.showInteres ? "on" : "") + '">' +
+      '<input type="checkbox" id="chk-interes" ' + (state.showInteres ? "checked" : "") + '>' +
+      ICON_INTERES + '<span>' + t("filtre_interes_label") + '</span></label>';
+  document.getElementById("chk-obligatori").addEventListener("change", (e) => { state.showObligatori = e.target.checked; renderTypeToggles(); render(); });
+  document.getElementById("chk-interes").addEventListener("change", (e) => { state.showInteres = e.target.checked; renderTypeToggles(); render(); });
+}
+
+function renderMunicipiContext() {
+  const ctx = document.getElementById("municipi-context");
+  const m = state.municipi;
+  if (!m) return;
+  ctx.innerHTML =
+    '<div class="top-row"><span class="name">' + t("municipi_seleccionat_prefix") + ' <strong>' + m.nom + '</strong> (' + m.poblacio.toLocaleString("ca-ES") + ' hab., ' + m.comarca + ')</span>' +
+    '<button type="button" class="clear-btn"><span class="x-icon">&#10005;</span>' + t("municipi_treure_seleccio") + '</button></div>' +
+    '<p class="explain">' + t("municipi_explicacio") + '</p>';
+  ctx.querySelector(".clear-btn").addEventListener("click", () => { state.municipi = null; state.justCleared = true; setView("explora"); });
+}
+
+function setupMunicipiSearch() {
+  const input = document.getElementById("municipi-input");
+  const box = document.getElementById("municipi-suggestions");
+  input.addEventListener("input", () => {
+    const q = normalize(input.value);
+    box.innerHTML = "";
+    if (q.length < 2) { box.style.display = "none"; return; }
+    const matches = MUNICIPIS.filter(m => normalize(m.nom).includes(q)).slice(0, 12);
+    if (!matches.length) { box.style.display = "none"; return; }
+    matches.forEach(m => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = m.nom + " · " + m.poblacio.toLocaleString("ca-ES") + " hab. (" + m.comarca + ")";
+      btn.addEventListener("click", () => selectMunicipi(m));
+      box.appendChild(btn);
+    });
+    box.style.display = "block";
+  });
+  document.addEventListener("click", (e) => {
+    if (!box.contains(e.target) && e.target !== input) box.style.display = "none";
+  });
+}
+
+function selectMunicipi(m) {
+  state.municipi = m;
+  document.getElementById("municipi-input").value = "";
+  document.getElementById("municipi-suggestions").style.display = "none";
+  setView("municipi");
+}
+
+function setupTopLinks() {
+  document.getElementById("btn-torna-inici-1").addEventListener("click", () => setView("entrada"));
+  document.getElementById("btn-torna-inici-2").addEventListener("click", () => setView("entrada"));
+  document.getElementById("btn-consulta-municipi").addEventListener("click", () => setView("cercaMunicipi"));
+}
+
+function setupControls() {
+  document.getElementById("search-input").addEventListener("input", (e) => { state.search = e.target.value; render(); });
+  document.getElementById("ambit-select").addEventListener("change", (e) => { state.ambit = e.target.value; render(); });
+}
+
+function matchesSearch(servei, q) {
+  if (!q) return true;
+  const nq = normalize(q);
+  if (normalize(servei.nom).includes(nq)) return true;
+  if (servei.resum && normalize(servei.resum).includes(nq)) return true;
+  if (servei.checklist && servei.checklist.some(it => normalize(it.pregunta).includes(nq) || normalize(it.llei_nom).includes(nq))) return true;
+  return false;
+}
+
+function baseFilteredByView() {
+  if (state.view === "municipi" && state.municipi) {
+    return SERVEIS.filter(sv => sv.bloc === "obligatori" && cardAppliesForMunicipi(sv, state.municipi.poblacio));
+  }
+  if (state.view === "explora") {
+    return SERVEIS.filter(sv => (sv.bloc === "obligatori" && state.showObligatori) || (sv.bloc === "interes_municipal" && state.showInteres));
+  }
+  return SERVEIS.slice();
+}
+
+function filteredServeis() {
+  return baseFilteredByView().filter(sv => {
+    if (state.ambit !== "tots" && sv.ambit !== state.ambit) return false;
+    if (!matchesSearch(sv, state.search)) return false;
+    return true;
+  });
+}
+
+function groupedChecklist(sv) {
+  // returns [{label, items}] — filtered by municipi population when in municipi view (no label shown),
+  // otherwise all items grouped by llindar_label in original order.
+  const poblacio = (state.view === "municipi" && state.municipi) ? state.municipi.poblacio : null;
+  if (poblacio != null) {
+    const items = sv.checklist.filter(it => itemApplies(it, poblacio));
+    return items.length ? [{ label: null, items: items }] : [];
+  }
+  const groups = [];
+  sv.checklist.forEach(it => {
+    let g = groups.find(g => g.label === it.llindar_label);
+    if (!g) { g = { label: it.llindar_label, items: [] }; groups.push(g); }
+    g.items.push(it);
+  });
+  return groups;
+}
+
+function serveiCard(sv) {
+  const pendent = sv.estat !== "validat";
+  const tipusTag = sv.bloc === "obligatori"
+    ? '<span class="tipus-tag obligatori">' + ICON_OBLIGATORI + t("distintiu_obligatori") + '</span>'
+    : '<span class="tipus-tag interes">' + ICON_INTERES + t("distintiu_interes_municipal") + '</span>';
+
+  let badges = "";
+  if (sv.bloc === "obligatori") badges += '<span class="badge">' + tramLabel(sv) + '</span>';
+  if (pendent) badges += '<span class="badge pendent">' + t("badge_pendent") + '</span>';
+
+  let body = "";
+  if (pendent) {
+    body = '<p class="pendent-note">' + t("pendent_nota") + '</p>';
+  } else {
+    const groups = groupedChecklist(sv);
+    body += '<p class="checklist-intro">' + t("checklist_intro") + '</p>';
+    groups.forEach(g => {
+      if (g.label) body += '<p class="checklist-group-label">' + g.label + '</p>';
+      g.items.forEach(it => {
+        const refLine = it.llei_nom + (it.article ? ", " + it.article : "");
+        body += '<details class="check-item"><summary>' +
+          '<span class="check-icon">' + ICON_CHECKBOX + '</span>' +
+          '<div class="check-content"><p class="check-question">' + it.pregunta + '</p>' +
+          '<span class="check-cita-row"><span class="check-cita">' + refLine + '</span><span class="check-cita-chev">&#9656;</span></span></div>' +
+          '</summary>' +
+          '<div class="check-item-detail">' + it.explicacio + '</div>' +
+          '</details>';
+      });
+    });
+    body += '<div class="servei-meta-row">';
+    body += '<span><strong>' + t("meta_competencia_label") + '</strong> ' + capitalize(sv.competencia) + '</span>';
+    body += '<span><strong>' + t("meta_actualitzacio_label") + '</strong> ' + formatDate(sv.data_actualitzacio) + '</span>';
+    body += '</div>';
+
+    const lleis = [];
+    (sv.normativa_mare || []).forEach(l => { if (!lleis.includes(l)) lleis.push(l); });
+    groups.forEach(g => g.items.forEach(it => { if (!lleis.includes(it.llei_nom)) lleis.push(it.llei_nom); }));
+    body += '<button type="button" class="legal-toggle">' + t("normativa_mostra") + '</button>';
+    body += '<div class="legal-box"><ul>' + lleis.map(l => '<li>' + l + '</li>').join("") + '</ul></div>';
+  }
+
+  const el = document.createElement("details");
+  el.className = "servei" + (pendent ? " pendent" : "");
+  el.innerHTML = '<summary><div class="servei-name-wrap">' + tipusTag +
+    '<span class="servei-name">' + sv.nom + '</span>' +
+    (sv.resum && !pendent ? '<p class="servei-resum">' + sv.resum + '</p>' : '') +
+    '</div><div class="badges">' + badges + '<span class="chev">&#9656;</span></div></summary>' +
+    '<div class="servei-detail">' + body + '</div>';
+
+  if (!pendent) {
+    const toggleBtn = el.querySelector(".legal-toggle");
+    const legalBox = el.querySelector(".legal-box");
+    toggleBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      legalBox.classList.toggle("open");
+      toggleBtn.textContent = legalBox.classList.contains("open") ? t("normativa_amaga") : t("normativa_mostra");
+    });
+  }
+  return el;
+}
+
+function capitalize(str) {
+  if (!str) return "—";
+  const map = { propia: "Pròpia", compartida: "Compartida", delegada: "Delegada", impropia: "Impròpia" };
+  return map[str] || str;
+}
+function formatDate(iso) {
+  if (!iso) return "—";
+  const d = new Date(iso);
+  return d.toLocaleDateString("ca-ES", { day: "numeric", month: "long", year: "numeric" });
+}
+
+function render() {
+  const app = document.getElementById("app");
+  app.innerHTML = "";
+  const filtered = filteredServeis();
+  const total = baseFilteredByView().length;
+
+  document.getElementById("filtre-panel-count").textContent = t("comptador_resultats", { n: filtered.length, total: total });
+
+  if (!filtered.length) {
+    app.innerHTML = '<div class="empty-state">' + t("cap_resultat") + '</div>';
+    return;
+  }
+
+  AMBIT_ORDER.forEach(ambit => {
+    const ambitServeis = filtered.filter(sv => sv.ambit === ambit)
+      .sort((a, b) => {
+        const aFilled = a.estat === "validat" ? 0 : 1;
+        const bFilled = b.estat === "validat" ? 0 : 1;
+        if (aFilled !== bFilled) return aFilled - bFilled;
+        return a.nom.localeCompare(b.nom, "ca");
+      });
+    if (!ambitServeis.length) return;
+    const det = document.createElement("details");
+    det.className = "ambit";
+    det.open = true;
+    const summary = document.createElement("summary");
+    summary.innerHTML = '<span>' + ambit + ' <span class="count">(' + ambitServeis.length + ')</span></span><span class="chev">&#9656;</span>';
+    det.appendChild(summary);
+    const list = document.createElement("div");
+    list.className = "servei-list";
+    ambitServeis.forEach(sv => list.appendChild(serveiCard(sv)));
+    det.appendChild(list);
+    app.appendChild(det);
+  });
+}
+
+staticText();
+renderEntrada();
+setupMunicipiSearch();
+setupTopLinks();
+setupControls();
+updateVisibility();
+</script>
+</body>
+</html>
