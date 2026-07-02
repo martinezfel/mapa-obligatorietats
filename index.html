@@ -26,10 +26,11 @@
     color: var(--text-body);
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
+    font-size: 18px;
   }
   body { padding-bottom: 4rem; }
   a { color: var(--accent); }
-  .wrap { max-width: 880px; margin: 0 auto; padding: 0 1.25rem; }
+  .wrap { max-width: 1100px; margin: 0 auto; padding: 0 1.25rem; }
   svg.icon { width: 14px; height: 14px; flex-shrink: 0; vertical-align: -2px; }
 
   header.top { padding: 1.75rem 0 0; }
@@ -552,6 +553,22 @@ setupMunicipiSearch();
 setupTopLinks();
 setupControls();
 updateVisibility();
+
+// --- Ajust automàtic d'alçada quan la pàgina s'incrusta en un iframe (p. ex. a Liferay) ---
+function sendHeightToParent() {
+  try {
+    window.parent.postMessage({ type: "casm-obligatorietats-resize", height: document.documentElement.scrollHeight }, "*");
+  } catch (e) {}
+}
+let resizeTimer = null;
+function scheduleSendHeight() {
+  if (resizeTimer) clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(sendHeightToParent, 50);
+}
+new MutationObserver(scheduleSendHeight).observe(document.body, { childList: true, subtree: true, attributes: true });
+window.addEventListener("load", sendHeightToParent);
+window.addEventListener("resize", sendHeightToParent);
+sendHeightToParent();
 </script>
 </body>
 </html>
