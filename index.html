@@ -110,6 +110,14 @@
   details.ambit[open] > summary .chev { transform: rotate(90deg); }
 
   .servei-list { border-top: 1px solid var(--border); }
+  .pendents-summary {
+    padding: 0.6rem 0.9rem;
+    font-size: 0.78rem;
+    color: var(--text-meta);
+    background: var(--pendent-bg);
+    line-height: 1.6;
+  }
+  .pendents-summary strong { color: var(--text-body); font-weight: 600; }
   details.servei { border-bottom: 1px solid var(--border); }
   details.servei:last-child { border-bottom: none; }
   details.servei > summary { list-style: none; cursor: pointer; padding: 0.7rem 0.9rem; display: flex; gap: 0.7rem; align-items: flex-start; justify-content: space-between; }
@@ -118,6 +126,7 @@
   .servei-name-wrap { flex: 1; min-width: 0; }
   .tipus-tag { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.7rem; font-weight: 700; padding: 0.12rem 0.5rem 0.12rem 0.4rem; border-radius: 100px; margin-bottom: 0.3rem; }
   .tipus-tag.obligatori { background: var(--accent-soft); color: var(--accent); }
+  .tipus-tag .tram-part { font-weight: 400; }
   .tipus-tag.interes { background: var(--bloc-im-soft); color: var(--bloc-im); }
   .servei-name { display: block; font-size: 0.9rem; font-weight: 600; color: var(--text); }
   .servei-resum { font-size: 0.82rem; color: var(--text-meta); margin: 0.3rem 0 0; line-height: 1.45; }
@@ -143,7 +152,7 @@
   .check-cita { font-size: 0.74rem; color: var(--accent); }
   .check-cita-chev { color: var(--accent); font-size: 0.65rem; transition: transform 0.15s ease; }
   details.check-item[open] .check-cita-chev { transform: rotate(90deg); }
-  .check-item-detail { padding: 0 0 0.7rem 1.9rem; font-size: 0.8rem; line-height: 1.55; color: var(--text-body); }
+  .check-item-detail { padding: 0 0 0.7rem 1.9rem; font-size: 0.8rem; line-height: 1.55; color: var(--text-body); font-style: italic; }
 
   .servei-meta-row { display: flex; gap: 1.5rem; flex-wrap: wrap; font-size: 0.78rem; color: var(--text-meta); margin: 0.9rem 0 0.7rem; }
   .servei-meta-row span strong { color: var(--text-body); font-weight: 600; }
@@ -224,7 +233,7 @@ function t(key, vars) {
 // Escut = obligació legal. Tick = servei d'interès municipal (a valorar).
 const ICON_OBLIGATORI = '<svg class="icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 1.3L13.5 3.3V7.3C13.5 10.8 11.2 13.1 8 14.6C4.8 13.1 2.5 10.8 2.5 7.3V3.3L8 1.3Z" fill="currentColor"/></svg>';
 const ICON_INTERES = '<svg class="icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6.8" stroke="currentColor" stroke-width="1.4"/><path d="M5 8.2L7 10.2L11 6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const ICON_CHECKBOX = '<svg class="icon" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="12" height="12" rx="2.5" stroke="currentColor" stroke-width="1.4"/></svg>';
+const ICON_QUESTION = '<svg class="icon" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><circle cx="8" cy="8" r="6.8" stroke="currentColor" stroke-width="1.4" fill="none"/><text x="8" y="11" text-anchor="middle" font-size="8.5" font-family="Helvetica, Arial, sans-serif" font-weight="bold" fill="currentColor">?</text></svg>';
 const ICON_DOWNLOAD = '<svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M8 2V10.5M8 10.5L4.8 7.3M8 10.5L11.2 7.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M2.5 12.5V13.2C2.5 13.6 2.8 14 3.3 14H12.7C13.1 14 13.5 13.6 13.5 13.2V12.5" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>';
 const ICON_MUNICIPI_LARGE = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color:var(--accent)"><path d="M4 21V9L12 3L20 9V21" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M9 21V13H15V21" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>';
 const ICON_EXPLORA_LARGE = '<svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color:var(--text-meta)"><rect x="3.5" y="3.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="3.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="3.5" y="13.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/><rect x="13.5" y="13.5" width="7" height="7" rx="1" stroke="currentColor" stroke-width="1.6"/></svg>';
@@ -462,12 +471,12 @@ function groupedChecklist(sv) {
 
 function serveiCard(sv) {
   const pendent = sv.estat !== "validat";
+  const tramText = sv.bloc === "obligatori" ? ' <span class="tram-part">· ' + tramLabel(sv) + '</span>' : "";
   const tipusTag = sv.bloc === "obligatori"
-    ? '<span class="tipus-tag obligatori">' + ICON_OBLIGATORI + t("distintiu_obligatori") + '</span>'
+    ? '<span class="tipus-tag obligatori">' + ICON_OBLIGATORI + t("distintiu_obligatori") + tramText + '</span>'
     : '<span class="tipus-tag interes">' + ICON_INTERES + t("distintiu_interes_municipal") + '</span>';
 
   let badges = "";
-  if (sv.bloc === "obligatori") badges += '<span class="badge">' + tramLabel(sv) + '</span>';
   if (pendent) badges += '<span class="badge pendent">' + t("badge_pendent") + '</span>';
 
   let body = "";
@@ -481,7 +490,7 @@ function serveiCard(sv) {
       g.items.forEach(it => {
         const refLine = lleiLink(it.llei_nom) + (it.article ? ", " + it.article : "");
         body += '<details class="check-item"><summary>' +
-          '<span class="check-icon">' + ICON_CHECKBOX + '</span>' +
+          '<span class="check-icon">' + ICON_QUESTION + '</span>' +
           '<div class="check-content"><p class="check-question">' + it.pregunta + '</p>' +
           '<span class="check-cita-row"><span class="check-cita">' + refLine + '</span><span class="check-cita-chev">&#9656;</span></span></div>' +
           '</summary>' +
@@ -546,14 +555,10 @@ function render() {
   }
 
   AMBIT_ORDER.forEach(ambit => {
-    const ambitServeis = filtered.filter(sv => sv.ambit === ambit)
-      .sort((a, b) => {
-        const aFilled = a.estat === "validat" ? 0 : 1;
-        const bFilled = b.estat === "validat" ? 0 : 1;
-        if (aFilled !== bFilled) return aFilled - bFilled;
-        return a.nom.localeCompare(b.nom, "ca");
-      });
+    const ambitServeis = filtered.filter(sv => sv.ambit === ambit);
     if (!ambitServeis.length) return;
+    const validats = ambitServeis.filter(sv => sv.estat === "validat").sort((a, b) => a.nom.localeCompare(b.nom, "ca"));
+    const pendents = ambitServeis.filter(sv => sv.estat !== "validat").sort((a, b) => a.nom.localeCompare(b.nom, "ca"));
     const det = document.createElement("details");
     det.className = "ambit";
     det.open = true;
@@ -562,7 +567,15 @@ function render() {
     det.appendChild(summary);
     const list = document.createElement("div");
     list.className = "servei-list";
-    ambitServeis.forEach(sv => list.appendChild(serveiCard(sv)));
+    validats.forEach(sv => list.appendChild(serveiCard(sv)));
+    if (pendents.length) {
+      const p = document.createElement("div");
+      p.className = "pendents-summary";
+      const nom_serveis = pendents.length === 1 ? "servei" : "serveis";
+      const nom_pendent = pendents.length === 1 ? "pendent" : "pendents";
+      p.innerHTML = "<strong>+ " + pendents.length + " " + nom_serveis + " d'aquest àmbit, " + nom_pendent + " d'elaborar:</strong> " + pendents.map(sv => sv.nom).join(", ");
+      list.appendChild(p);
+    }
     det.appendChild(list);
     app.appendChild(det);
   });
