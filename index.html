@@ -301,8 +301,9 @@ function staticText() {
   document.getElementById("btn-consulta-municipi").textContent = t("municipi_canviar_des_explora");
   document.getElementById("search-input").placeholder = t("cerca_placeholder");
   document.getElementById("filtre-panel-title").textContent = t("cerca_filtra_titol");
+  const ambitsAmbContingut = AMBIT_ORDER.filter(a => SERVEIS.some(sv => sv.ambit === a));
   document.getElementById("ambit-select").innerHTML = '<option value="tots">' + t("ambit_select_default") + '</option>' +
-    AMBIT_ORDER.map(a => '<option value="' + a + '">' + a + '</option>').join("");
+    ambitsAmbContingut.map(a => '<option value="' + a + '">' + a + '</option>').join("");
   document.getElementById("app-footer").innerHTML =
     '<p>' + t("avis_revisio") + '</p><p>' + t("avis_general") + '</p><p>' + t("avis_organitzacio") + '</p>';
 }
